@@ -26,9 +26,11 @@ const OwnerCard: React.FC<OwnerCardProps> = ({ owner, onTap }) => {
   const contactsCount = owner.contact?.length || 0;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onTap}
-      className="bg-slate-800 rounded-xl px-4 py-5 shadow-lg shadow-black/30 border border-slate-700 active:bg-slate-700/90 transition-colors cursor-pointer"
+      className="w-full text-left bg-slate-800 rounded-xl px-4 py-5 shadow-lg shadow-black/30 border border-slate-700 active:bg-slate-700/90 focus:outline-none focus:ring-2 focus:ring-blue-500/70 transition-colors"
+      aria-label={`Открыть карточку собственника ${owner.name}`}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
@@ -96,7 +98,7 @@ const OwnerCard: React.FC<OwnerCardProps> = ({ owner, onTap }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>
-    </div>
+    </button>
   );
 };
 

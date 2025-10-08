@@ -33,7 +33,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, userRole 
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={`
-                flex flex-col items-center justify-center flex-1 h-full
+                relative flex flex-col items-center justify-center flex-1 h-full
                 min-w-[44px] min-h-[44px]
                 transition-colors duration-200
                 ${isActive 

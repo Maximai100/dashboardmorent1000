@@ -18,13 +18,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         try {
-            const storedUser = sessionStorage.getItem('user');
+            const storedUser = localStorage.getItem('user');
             if (storedUser) {
                 setUser(JSON.parse(storedUser));
             }
         } catch (error) {
             console.error("Failed to parse user from sessionStorage", error);
-            sessionStorage.removeItem('user');
+            localStorage.removeItem('user');
         } finally {
             setLoading(false);
         }
@@ -33,12 +33,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const login = async (username: string, password_hash: string) => {
         const loggedInUser = await authService.login(username, password_hash);
         setUser(loggedInUser);
-        sessionStorage.setItem('user', JSON.stringify(loggedInUser));
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
     };
 
     const logout = () => {
         setUser(null);
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('user');
     };
 
     if (loading) {
