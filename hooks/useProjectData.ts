@@ -12,16 +12,30 @@ export const useProjectData = () => {
         try {
             setLoading(true);
             const fetchedProjects = await directusService.getProjects();
-            setProjects(fetchedProjects);
+            
+            // Load attachments for each project separately to avoid M2M issues
+            const projectsWithAttachments = await Promise.all(
+                fetchedProjects.map(async (project) => {
+                    try {
+                        const attachments = await directusService.getProjectAttachments(project.id);
+                        return { ...project, attachments };
+                    } catch (err) {
+                        console.warn(`Failed to load attachments for project ${project.id}:`, err);
+                        return { ...project, attachments: [] };
+                    }
+                })
+            );
+            
+            setProjects(projectsWithAttachments);
 
             const savedOrder = localStorage.getItem('projectOrder');
             if (savedOrder) {
                 // Filter saved order to only include IDs of projects that still exist
-                const existingProjectIds = new Set(fetchedProjects.map(p => p.id));
+                const existingProjectIds = new Set(projectsWithAttachments.map(p => p.id));
                 const validOrder = JSON.parse(savedOrder).filter((id: string) => existingProjectIds.has(id));
                 setProjectOrder(validOrder);
             } else {
-                setProjectOrder(fetchedProjects.map(p => p.id));
+                setProjectOrder(projectsWithAttachments.map(p => p.id));
             }
 
             setError(null);

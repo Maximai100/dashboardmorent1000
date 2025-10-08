@@ -20,8 +20,15 @@ const getAuthHeaders = () => ({
 // --- Projects API ---
 
 export const getProjects = async (): Promise<Project[]> => {
-    // Fetch projects and their related attachments (files) in one go.
-    const response = await fetch(`${DIRECTUS_URL}/items/projects?fields=*,attachments.directus_files_id.*`);
+    // Fetch projects without attachments to avoid M2M query issues
+    // Attachments will be loaded separately if needed
+    const response = await fetch(`${DIRECTUS_URL}/items/projects`);
+    return handleResponse(response);
+};
+
+export const getProjectAttachments = async (projectId: string): Promise<ProjectAttachment[]> => {
+    // Get attachments for a specific project
+    const response = await fetch(`${DIRECTUS_URL}/items/projects_files?filter[projects_id][_eq]=${projectId}`);
     return handleResponse(response);
 };
 
