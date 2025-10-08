@@ -118,7 +118,7 @@ const ManagerDashboard: React.FC = () => {
             attachments: [],
             notes: '',
             history: null as any, // Directus JSON field expects null instead of empty array
-            tags: [],
+            tags: null as any, // Directus JSON field expects null instead of empty array
         };
         const createdProject = await addProject(newProjectData);
         if (createdProject) {

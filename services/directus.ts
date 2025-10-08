@@ -26,10 +26,19 @@ export const getProjects = async (): Promise<Project[]> => {
 };
 
 export const createProject = async (projectData: Omit<Project, 'id'>): Promise<Project> => {
+    // Ensure JSON fields are properly formatted for Directus
+    const formattedData = {
+        ...projectData,
+        history: projectData.history || null,
+        tags: projectData.tags || null,
+    };
+    
+    console.log('Sending project data:', formattedData);
+    
     const response = await fetch(`${DIRECTUS_URL}/items/projects`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(projectData),
+        body: JSON.stringify(formattedData),
     });
     return handleResponse(response);
 };

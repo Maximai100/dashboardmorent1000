@@ -40,5 +40,5 @@ export interface Project {
     attachments: ProjectAttachment[];
     notes: string;
     history: HistoryLog[] | null; // Allow null for Directus JSON field
-    tags: string[];
+    tags: string[] | null; // Allow null for Directus JSON field
 }
