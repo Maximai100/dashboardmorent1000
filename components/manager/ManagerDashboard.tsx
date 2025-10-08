@@ -64,7 +64,7 @@ const ManagerDashboard: React.FC = () => {
             filtered = filtered.filter(project =>
                 project.name.toLowerCase().includes(lowercasedFilter) ||
                 project.responsible.toLowerCase().includes(lowercasedFilter) ||
-                (project.tags && project.tags.some(tag => tag.toLowerCase().includes(lowercasedFilter)))
+                (project.tags && project.tags.length > 0 && project.tags.some(tag => tag.toLowerCase().includes(lowercasedFilter)))
             );
         }
 
@@ -74,10 +74,11 @@ const ManagerDashboard: React.FC = () => {
 
         if (attachmentFilter !== 'all') {
             filtered = filtered.filter(project => {
-                const hasAttachments = project.attachments && project.attachments.length > 0;
+                const attachments = project.attachments || [];
+                const hasAttachments = attachments.length > 0;
                 switch (attachmentFilter) {
-                    case 'file': return project.attachments?.some(att => att.directus_files_id) || false;
-                    case 'link': return project.attachments?.some(att => att.url) || false; 
+                    case 'file': return attachments.some(att => att.directus_files_id);
+                    case 'link': return attachments.some(att => att.url); 
                     case 'none': return !hasAttachments;
                     default: return true;
                 }
