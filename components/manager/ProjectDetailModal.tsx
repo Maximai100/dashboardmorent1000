@@ -4,6 +4,7 @@ import { ProjectStatus } from '../../types/manager';
 import Modal from '../Modal';
 import { TrashIcon, XMarkIcon, PlusIcon, FileIcon, LinkIcon, ClockIcon, ArrowUpTrayIcon, SpinnerIcon } from '../icons/Icons';
 import * as directusService from '../../services/directus';
+import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../../config';
 
 interface ProjectDetailModalProps {
     project: Project;
@@ -236,20 +237,25 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     <h4 className="text-md font-semibold text-slate-200 mb-2">Вложения</h4>
                     {editableProject.attachments.length > 0 && (
                         <ul className="border border-slate-700 rounded-lg divide-y divide-slate-700 mb-4">
-                           {editableProject.attachments.map(att => (
-                                <li key={att.id} className="p-3 flex items-center justify-between hover:bg-slate-700/50">
-                                    <div className="flex items-center min-w-0">
-                                        {att.url ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium text-white truncate">{att.title || att.directus_files_id?.title}</p>
-                                            {att.directus_files_id && <p className="text-xs text-slate-400 truncate">{att.directus_files_id.type}, {(att.directus_files_id.filesize / 1024).toFixed(2)} KB</p>}
-                                        </div>
-                                    </div>
-                                    <button onClick={() => handleRemoveAttachment(att.id)} className="ml-2 p-1.5 rounded-full hover:bg-red-900/50 text-slate-400 hover:text-red-400">
-                                        <TrashIcon className="w-4 h-4" />
-                                    </button>
-                                </li>
-                           ))}
+                           {editableProject.attachments.map(att => {
+                                const fileUrl = att.directus_files_id ? `${DIRECTUS_URL}/assets/${att.directus_files_id.id}?access_token=${DIRECTUS_TOKEN}` : '#';
+                                const finalUrl = att.url || fileUrl;
+                                const title = att.title || att.directus_files_id?.title || 'Без названия';
+                                return (
+                                    <li key={att.id} className="p-3 flex items-center justify-between hover:bg-slate-700/50">
+                                        <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0 group" title={title}>
+                                            {att.url ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{title}</p>
+                                                {att.directus_files_id && <p className="text-xs text-slate-400 truncate">{att.directus_files_id.type}, {(att.directus_files_id.filesize / 1024).toFixed(2)} KB</p>}
+                                            </div>
+                                        </a>
+                                        <button onClick={() => handleRemoveAttachment(att.id)} className="ml-2 p-1.5 rounded-full hover:bg-red-900/50 text-slate-400 hover:text-red-400" title="Удалить вложение">
+                                            <TrashIcon className="w-4 h-4" />
+                                        </button>
+                                    </li>
+                                );
+                           })}
                         </ul>
                     )}
                     <div className="space-y-3 p-3 bg-slate-700/50 rounded-lg">

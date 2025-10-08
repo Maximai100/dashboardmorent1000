@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { Project } from '../../types/manager';
 import { StatusBadge } from './StatusBadge';
 import { FileIcon, LinkIcon } from '../icons/Icons';
+import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../../config';
 
 interface ProjectRowProps {
     project: Project;
@@ -89,18 +90,18 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
                 ) : (
                     <div className="flex items-center space-x-2">
                         {project.attachments.map(att => {
-                            // Display a link icon for attachments with a URL, and a file icon for others.
                             if (att.url) {
                                 return (
-                                    <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" title={att.title || att.url}>
+                                    <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" title={att.title || att.url} onClick={(e) => e.stopPropagation()}>
                                         <LinkIcon className="w-5 h-5 text-slate-400 hover:text-blue-400" />
                                     </a>
                                 );
                             } else if (att.directus_files_id) {
+                                const fileUrl = `${DIRECTUS_URL}/assets/${att.directus_files_id.id}?access_token=${DIRECTUS_TOKEN}`;
                                 return (
-                                    <div key={att.id} title={att.directus_files_id.title}>
-                                        <FileIcon className="w-5 h-5 text-slate-400" />
-                                    </div>
+                                    <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer" title={att.directus_files_id.title} onClick={(e) => e.stopPropagation()}>
+                                        <FileIcon className="w-5 h-5 text-slate-400 hover:text-blue-400" />
+                                    </a>
                                 );
                             }
                             return null;
