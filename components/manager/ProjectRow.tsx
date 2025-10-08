@@ -82,10 +82,31 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
                 </div>
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300 cursor-pointer" onClick={() => onRowClick(project)}>
-                 {/* Temporarily disabled attachments display to avoid M2M issues */}
-                 <span className="px-2 py-1 text-xs font-medium rounded bg-red-500/20 text-red-400">
-                     Attachments disabled
-                 </span>
+                 {!project.attachments || project.attachments.length === 0 ? (
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-red-500/20 text-red-400">
+                        Нет вложений
+                    </span>
+                ) : (
+                    <div className="flex items-center space-x-2">
+                        {project.attachments.map(att => {
+                            // Display a link icon for attachments with a URL, and a file icon for others.
+                            if (att.url) {
+                                return (
+                                    <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" title={att.title || att.url}>
+                                        <LinkIcon className="w-5 h-5 text-slate-400 hover:text-blue-400" />
+                                    </a>
+                                );
+                            } else if (att.directus_files_id) {
+                                return (
+                                    <div key={att.id} title={att.directus_files_id.title}>
+                                        <FileIcon className="w-5 h-5 text-slate-400" />
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })}
+                    </div>
+                )}
             </td>
             <td className="px-6 py-4 text-sm text-slate-400 max-w-sm truncate cursor-pointer" onClick={() => onRowClick(project)}>
                 {project.notes || '—'}

@@ -74,12 +74,11 @@ const ManagerDashboard: React.FC = () => {
 
         if (attachmentFilter !== 'all') {
             filtered = filtered.filter(project => {
-                // For now, we'll assume projects have no attachments since we're not loading them initially
-                // This prevents the M2M query issues
+                const hasAttachments = project.attachments && project.attachments.length > 0;
                 switch (attachmentFilter) {
-                    case 'file': return false; // No attachments loaded initially
-                    case 'link': return false; // No attachments loaded initially
-                    case 'none': return true; // All projects have no attachments initially
+                    case 'file': return project.attachments?.some(att => att.directus_files_id) || false;
+                    case 'link': return project.attachments?.some(att => att.url) || false; 
+                    case 'none': return !hasAttachments;
                     default: return true;
                 }
             });
