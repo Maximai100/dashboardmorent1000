@@ -11,6 +11,7 @@ import ProfileMenu from './components/mobile/ProfileMenu';
 import OfflineIndicator from './components/OfflineIndicator';
 import { useIsMobile } from './hooks/useMediaQuery';
 import { syncManager } from './services/syncManager';
+import FloatingActions from './components/mobile/FloatingActions';
 
 // Lazy load heavy components
 const OwnerModal = lazy(() => import('./components/OwnerModal'));
@@ -306,7 +307,7 @@ const App: React.FC = () => {
                     </button>
                 </div>
             )}
-            <main>
+            <main className="relative">
                 <ResponsiveDashboard
                     owners={sortedOwners}
                     columns={columns}
@@ -319,6 +320,13 @@ const App: React.FC = () => {
                     onSort={handleSort}
                     onReorderColumns={handleReorderColumns}
                 />
+                {isMobile && activeTab === 'owners' && (
+                    <FloatingActions
+                        onAddOwner={() => setIsAddOwnerModalOpen(true)}
+                        onAddColumn={() => setIsAddColumnModalOpen(true)}
+                        disabled={isAddOwnerModalOpen || isAddColumnModalOpen || loading}
+                    />
+                )}
             </main>
             {renderModal()}
             {isAddOwnerModalOpen && (
