@@ -114,10 +114,9 @@ const ManagerDashboard: React.FC = () => {
             name: 'Новый проект',
             responsible: 'Не назначен',
             deadline: new Date().toISOString(),
-            status: ProjectStatus.InProgress,
             attachments: [],
             notes: '',
-            // Don't include history and tags for new projects - they will be added by Directus
+            // Don't include JSON fields (history, tags, status) for new projects - they will be added by Directus
         };
         const createdProject = await addProject(newProjectData);
         if (createdProject) {

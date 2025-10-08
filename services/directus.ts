@@ -26,14 +26,15 @@ export const getProjects = async (): Promise<Project[]> => {
 };
 
 export const createProject = async (projectData: Omit<Project, 'id'>): Promise<Project> => {
-    // For new projects, exclude JSON fields that might cause issues
-    const { history, tags, ...baseData } = projectData;
+    // For new projects, exclude all JSON fields that might cause issues
+    const { history, tags, status, ...baseData } = projectData;
     
     const formattedData = {
         ...baseData,
         // Only include JSON fields if they have actual data
         ...(history && history.length > 0 ? { history } : {}),
         ...(tags && tags.length > 0 ? { tags } : {}),
+        ...(status ? { status } : {}),
     };
     
     console.log('Sending project data:', formattedData);

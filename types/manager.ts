@@ -35,7 +35,7 @@ export interface Project {
     name: string;
     responsible: string;
     deadline: string; // ISO string
-    status: ProjectStatus;
+    status?: ProjectStatus; // Optional for new projects
     // attachments can now contain both files and links
     attachments: ProjectAttachment[];
     notes: string;
