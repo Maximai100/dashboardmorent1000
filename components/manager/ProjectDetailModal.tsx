@@ -25,8 +25,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     
     const [editableProject, setEditableProject] = useState<Project>(initialProject);
     const [newTag, setNewTag] = useState('');
-    // Link attachment is not supported by default 'files' M2M, this is left for potential extension
-    // const [newLink, setNewLink] = useState({ url: '', name: '' }); 
+    const [isAddingLink, setIsAddingLink] = useState(false);
+    const [newLink, setNewLink] = useState({ url: '', title: '' });
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +84,25 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
         }));
     };
     
+    const handleAddLink = () => {
+        if (!newLink.url.trim()) return;
+
+        const newAttachment: ProjectAttachment = {
+            id: Date.now() * -1,
+            projects_id: project.id,
+            url: newLink.url.trim(),
+            title: newLink.title.trim() || newLink.url.trim(),
+        };
+
+        setEditableProject(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments || []), newAttachment],
+        }));
+
+        setNewLink({ url: '', title: '' });
+        setIsAddingLink(false);
+    };
+    
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
@@ -129,12 +148,17 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
             }
         }
 
-        const toCreate: { directus_files_id: string }[] = [];
+        const toCreate: any[] = [];
         for (const att of editableProject.attachments || []) {
             const isNew = att.id < 0;
+            if (!isNew) continue;
             const fileId = att.directus_files_id?.id;
-            if (isNew && fileId) {
+            if (fileId) {
                 toCreate.push({ directus_files_id: fileId });
+                continue;
+            }
+            if (att.url) {
+                toCreate.push({ url: att.url, title: att.title || att.url });
             }
         }
 
@@ -278,6 +302,40 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                              }
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+                        <button
+                            type="button"
+                            onClick={() => setIsAddingLink(!isAddingLink)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-600 border border-slate-500 rounded-lg shadow-sm hover:bg-slate-500"
+                        >
+                            <LinkIcon className="w-5 h-5" />
+                            <span>{isAddingLink ? 'Отменить' : 'Добавить ссылку'}</span>
+                        </button>
+                        {isAddingLink && (
+                            <div className="pt-3 border-t border-slate-600 space-y-3">
+                                <input
+                                    type="url"
+                                    placeholder="https://example.com/document"
+                                    value={newLink.url}
+                                    onChange={(e) => setNewLink(prev => ({ ...prev, url: e.target.value }))}
+                                    className={inputClasses}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Название (необязательно)"
+                                    value={newLink.title}
+                                    onChange={(e) => setNewLink(prev => ({ ...prev, title: e.target.value }))}
+                                    className={inputClasses}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleAddLink}
+                                    disabled={!newLink.url.trim()}
+                                    className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 disabled:bg-blue-500 disabled:cursor-not-allowed"
+                                >
+                                    Сохранить ссылку
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
