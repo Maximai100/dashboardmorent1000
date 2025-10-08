@@ -39,6 +39,6 @@ export interface Project {
     // attachments can now contain both files and links
     attachments: ProjectAttachment[];
     notes: string;
-    history: HistoryLog[] | null; // Allow null for Directus JSON field
-    tags: string[] | null; // Allow null for Directus JSON field
+    history?: HistoryLog[] | null; // Optional for new projects
+    tags?: string[] | null; // Optional for new projects
 }
