@@ -20,9 +20,8 @@ const getAuthHeaders = () => ({
 // --- Projects API ---
 
 export const getProjects = async (): Promise<Project[]> => {
-    // Fetch projects and their related attachments (files) in one go.
-    // Use deep parameter to request nested relation fields, avoiding potential fields parser issues.
-    const response = await fetch(`${DIRECTUS_URL}/items/projects?fields=*&deep[attachments][_fields]=*,directus_files_id.*`);
+    // Fetch projects with attachments and nested file data in one request
+    const response = await fetch(`${DIRECTUS_URL}/items/projects?fields=*,attachments.*,attachments.directus_files_id.*`);
     return handleResponse(response);
 };
 
