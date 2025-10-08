@@ -55,7 +55,8 @@ export const createProject = async (projectData: Omit<Project, 'id'>): Promise<P
 };
 
 export const updateProject = async (id: string, projectData: Partial<Project>): Promise<Project> => {
-    const response = await fetch(`${DIRECTUS_URL}/items/projects/${id}`, {
+    // Request the updated project back with deep-expanded attachments
+    const response = await fetch(`${DIRECTUS_URL}/items/projects/${id}?fields=*&deep[attachments][_fields]=*,directus_files_id.*`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(projectData),
