@@ -16,7 +16,7 @@ export interface DirectusFile {
 
 // Represents the M2M relationship item for attachments, which can be a file or a link
 export interface ProjectAttachment {
-    id: string; // ID of the junction table row (UUID)
+    id: number; // ID of the junction table row (integer)
     projects_id: string;
     directus_files_id?: DirectusFile; // A file from Directus, optional for links
     url?: string; // A URL for a link attachment
