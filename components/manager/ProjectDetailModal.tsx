@@ -112,14 +112,16 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     };
 
     const handleSaveChanges = () => {
+        // Filter out any invalid attachments to prevent creating "empty" relations.
+        const validAttachmentsToSave = editableProject.attachments.filter(
+            att => att.directus_files_id || (att.url && att.url.trim() !== '')
+        );
+
         const projectToSave = {
             ...editableProject,
             // The payload for an M2M relation is an array of objects.
             // Each object represents a row in the junction table.
-            // For new rows, omit the primary key of the junction row.
-            // For existing rows, include the primary key.
-            // To delete, we must omit the row from this final array.
-            attachments: editableProject.attachments.map(att => ({
+            attachments: validAttachmentsToSave.map(att => ({
                 // If ID is negative (new), don't send it. Otherwise, send it for update.
                 id: att.id > 0 ? att.id : undefined,
                 url: att.url || null,
@@ -160,7 +162,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
         </div>
     );
 
-    // Filter out any invalid attachments that are neither a file nor a link
+    // Filter out any invalid attachments that are neither a file nor a link for display
     const validAttachments = editableProject.attachments.filter(att => att.directus_files_id || att.url);
 
     return (
