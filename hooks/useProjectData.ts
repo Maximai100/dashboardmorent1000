@@ -13,29 +13,23 @@ export const useProjectData = () => {
             setLoading(true);
             const fetchedProjects = await directusService.getProjects();
             
-            // Load attachments for each project separately to avoid M2M issues
-            const projectsWithAttachments = await Promise.all(
-                fetchedProjects.map(async (project) => {
-                    try {
-                        const attachments = await directusService.getProjectAttachments(project.id);
-                        return { ...project, attachments };
-                    } catch (err) {
-                        console.warn(`Failed to load attachments for project ${project.id}:`, err);
-                        return { ...project, attachments: [] };
-                    }
-                })
-            );
+            // Initialize projects without attachments to avoid M2M issues
+            // Attachments will be loaded on-demand when needed
+            const projectsWithEmptyAttachments = fetchedProjects.map(project => ({
+                ...project,
+                attachments: []
+            }));
             
-            setProjects(projectsWithAttachments);
+            setProjects(projectsWithEmptyAttachments);
 
             const savedOrder = localStorage.getItem('projectOrder');
             if (savedOrder) {
                 // Filter saved order to only include IDs of projects that still exist
-                const existingProjectIds = new Set(projectsWithAttachments.map(p => p.id));
+                const existingProjectIds = new Set(projectsWithEmptyAttachments.map(p => p.id));
                 const validOrder = JSON.parse(savedOrder).filter((id: string) => existingProjectIds.has(id));
                 setProjectOrder(validOrder);
             } else {
-                setProjectOrder(projectsWithAttachments.map(p => p.id));
+                setProjectOrder(projectsWithEmptyAttachments.map(p => p.id));
             }
 
             setError(null);
@@ -90,6 +84,19 @@ export const useProjectData = () => {
         }
     };
 
+    const loadProjectAttachments = async (projectId: string) => {
+        try {
+            const attachments = await directusService.getProjectAttachments(projectId);
+            setProjects(prev => prev.map(p => 
+                p.id === projectId ? { ...p, attachments } : p
+            ));
+            return attachments;
+        } catch (err: any) {
+            console.warn(`Failed to load attachments for project ${projectId}:`, err);
+            return [];
+        }
+    };
+
     return { 
         projects, 
         projectOrder, 
@@ -98,6 +105,7 @@ export const useProjectData = () => {
         error, 
         addProject, 
         updateProject, 
-        deleteProject 
+        deleteProject,
+        loadProjectAttachments // Load attachments on-demand
     };
 };
