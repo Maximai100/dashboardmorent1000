@@ -89,7 +89,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
                     </span>
                 ) : (
                     <div className="flex items-center space-x-2">
-                        {project.attachments.map(att => {
+                        {(project.attachments || []).map(att => {
                             if (att.url) {
                                 return (
                                     <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" title={att.title || att.url} onClick={(e) => e.stopPropagation()}>

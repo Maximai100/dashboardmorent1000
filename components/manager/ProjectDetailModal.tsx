@@ -64,7 +64,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     const handleRemoveAttachment = (junctionIdToRemove: number) => {
         setEditableProject(prev => ({
             ...prev,
-            attachments: prev.attachments.filter(att => att.id !== junctionIdToRemove),
+            attachments: (prev.attachments || []).filter(att => att.id !== junctionIdToRemove),
         }));
     };
     
@@ -79,7 +79,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     projects_id: project.id,
                     directus_files_id: uploadedFile
                 };
-                setEditableProject(prev => ({ ...prev, attachments: [...prev.attachments, newAttachment] }));
+                setEditableProject(prev => ({ ...prev, attachments: [...(prev.attachments || []), newAttachment] }));
             } catch (error) {
                 console.error("File upload failed:", error);
                 alert("Не удалось загрузить файл.");
@@ -104,7 +104,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
 
         setEditableProject(prev => ({
             ...prev,
-            attachments: [...prev.attachments, newAttachment],
+            attachments: [...(prev.attachments || []), newAttachment],
         }));
 
         setNewLink({ url: '', title: '' });
@@ -113,7 +113,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
 
     const handleSaveChanges = () => {
         // Filter out any invalid attachments to prevent creating "empty" relations.
-        const validAttachmentsToSave = editableProject.attachments.filter(
+        const validAttachmentsToSave = (editableProject.attachments || []).filter(
             att => att.directus_files_id || (att.url && att.url.trim() !== '')
         );
 
@@ -163,7 +163,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     );
 
     // Filter out any invalid attachments that are neither a file nor a link for display
-    const validAttachments = editableProject.attachments.filter(att => att.directus_files_id || att.url);
+    const validAttachments = (editableProject.attachments || []).filter(att => att.directus_files_id || att.url);
 
     return (
         <Modal title="Детали проекта" onClose={onClose} footer={footer}>

@@ -21,8 +21,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onTap }) => {
   };
 
   const hasAttachments = project.attachments && project.attachments.length > 0;
-  const fileCount = project.attachments?.filter(att => att.directus_files_id).length || 0;
-  const linkCount = project.attachments?.filter(att => att.url).length || 0;
+  const fileCount = (project.attachments || []).filter(att => att.directus_files_id).length;
+  const linkCount = (project.attachments || []).filter(att => att.url).length;
 
   return (
     <div
