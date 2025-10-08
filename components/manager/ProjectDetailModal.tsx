@@ -14,16 +14,7 @@ interface ProjectDetailModalProps {
 }
 
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClose, onSave, onDelete }) => {
-    // Ensure all required fields are initialized
-    const initialProject: Project = {
-        ...project,
-        history: project.history || [],
-        tags: project.tags || [],
-        attachments: project.attachments || [],
-        notes: project.notes || '',
-    };
-    
-    const [editableProject, setEditableProject] = useState<Project>(initialProject);
+    const [editableProject, setEditableProject] = useState<Project>(project);
     const [newTag, setNewTag] = useState('');
     const [isAddingLink, setIsAddingLink] = useState(false);
     const [newLink, setNewLink] = useState({ url: '', title: '' });
@@ -31,14 +22,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const updatedProject: Project = {
-            ...project,
-            history: project.history || [],
-            tags: project.tags || [],
-            attachments: project.attachments || [],
-            notes: project.notes || '',
-        };
-        setEditableProject(updatedProject);
+        setEditableProject(project);
     }, [project]);
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -60,10 +44,10 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && newTag.trim() !== '') {
             e.preventDefault();
-            if (!(editableProject.tags || []).includes(newTag.trim())) {
+            if (!editableProject.tags.includes(newTag.trim())) {
                 setEditableProject(prev => ({
                     ...prev,
-                    tags: [...(prev.tags || []), newTag.trim()],
+                    tags: [...prev.tags, newTag.trim()],
                 }));
             }
             setNewTag('');
@@ -73,34 +57,15 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     const handleRemoveTag = (tagToRemove: string) => {
         setEditableProject(prev => ({
             ...prev,
-            tags: (prev.tags || []).filter(tag => tag !== tagToRemove),
+            tags: prev.tags.filter(tag => tag !== tagToRemove),
         }));
     };
 
     const handleRemoveAttachment = (junctionIdToRemove: number) => {
         setEditableProject(prev => ({
             ...prev,
-            attachments: (prev.attachments || []).filter(att => att.id !== junctionIdToRemove),
+            attachments: prev.attachments.filter(att => att.id !== junctionIdToRemove),
         }));
-    };
-    
-    const handleAddLink = () => {
-        if (!newLink.url.trim()) return;
-
-        const newAttachment: ProjectAttachment = {
-            id: Date.now() * -1,
-            projects_id: project.id,
-            url: newLink.url.trim(),
-            title: newLink.title.trim() || newLink.url.trim(),
-        };
-
-        setEditableProject(prev => ({
-            ...prev,
-            attachments: [...(prev.attachments || []), newAttachment],
-        }));
-
-        setNewLink({ url: '', title: '' });
-        setIsAddingLink(false);
     };
     
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,14 +74,12 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
             try {
                 setIsUploading(true);
                 const uploadedFile = await directusService.uploadFile(file);
-                // Create the structure that Directus expects for a new M2M item.
-                // We create a "fake" junction ID locally, Directus will handle the real one.
                 const newAttachment: ProjectAttachment = {
-                    id: -1, // Placeholder
+                    id: Date.now() * -1, // Negative temporary ID
                     projects_id: project.id,
                     directus_files_id: uploadedFile
                 };
-                setEditableProject(prev => ({ ...prev, attachments: [...(prev.attachments || []), newAttachment] }));
+                setEditableProject(prev => ({ ...prev, attachments: [...prev.attachments, newAttachment] }));
             } catch (error) {
                 console.error("File upload failed:", error);
                 alert("Не удалось загрузить файл.");
@@ -128,48 +91,43 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
             event.target.value = '';
         }
     };
+    
+    const handleAddLink = () => {
+        if (!newLink.url.trim()) return;
+
+        const newAttachment: ProjectAttachment = {
+            id: Date.now() * -1, // Negative ID for local state tracking
+            projects_id: project.id,
+            url: newLink.url.trim(),
+            title: newLink.title.trim() || newLink.url.trim(),
+        };
+
+        setEditableProject(prev => ({
+            ...prev,
+            attachments: [...prev.attachments, newAttachment],
+        }));
+
+        setNewLink({ url: '', title: '' });
+        setIsAddingLink(false);
+    };
 
     const handleSaveChanges = () => {
-        // Deep relational update for M2M `attachments` to avoid integer/uuid mismatch on junction id
-        // - create: new links by directus_files_id (uploaded during this session have temporary id -1)
-        // - delete: removed junction ids compared to original project
-        const originalById = new Map<number, ProjectAttachment>(
-            (project.attachments || []).map(att => [att.id, att])
-        );
-
-        const currentById = new Map<number, ProjectAttachment>(
-            (editableProject.attachments || []).map(att => [att.id, att])
-        );
-
-        const toDelete: number[] = [];
-        for (const [junctionId] of originalById) {
-            if (!currentById.has(junctionId)) {
-                toDelete.push(junctionId);
-            }
-        }
-
-        const toCreate: any[] = [];
-        for (const att of editableProject.attachments || []) {
-            const isNew = att.id < 0;
-            if (!isNew) continue;
-            const fileId = att.directus_files_id?.id;
-            if (fileId) {
-                toCreate.push({ directus_files_id: fileId });
-                continue;
-            }
-            if (att.url) {
-                toCreate.push({ url: att.url, title: att.title || att.url });
-            }
-        }
-
         const projectToSave = {
             ...editableProject,
-            attachments: {
-                ...(toCreate.length > 0 ? { create: toCreate } : {}),
-                ...(toDelete.length > 0 ? { delete: toDelete } : {}),
-            },
-        } as any;
-
+            // The payload for an M2M relation is an array of objects.
+            // Each object represents a row in the junction table.
+            // For new rows, omit the primary key of the junction row.
+            // For existing rows, include the primary key.
+            // To delete, we must omit the row from this final array.
+            attachments: editableProject.attachments.map(att => ({
+                // If ID is negative (new), don't send it. Otherwise, send it for update.
+                id: att.id > 0 ? att.id : undefined,
+                url: att.url || null,
+                title: att.title || null,
+                // Send file ID as a string, not an object, if it exists.
+                directus_files_id: att.directus_files_id ? att.directus_files_id.id : null,
+            }))
+        };
         onSave(projectToSave as any);
     };
     
@@ -202,6 +160,9 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
         </div>
     );
 
+    // Filter out any invalid attachments that are neither a file nor a link
+    const validAttachments = editableProject.attachments.filter(att => att.directus_files_id || att.url);
+
     return (
         <Modal title="Детали проекта" onClose={onClose} footer={footer}>
             <div className="space-y-6">
@@ -217,7 +178,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     </div>
                      <div>
                         <label htmlFor="deadline" className="block mb-2 text-sm font-medium text-white">Дедлайн</label>
-                        <input type="date" id="deadline" name="deadline" value={editableProject.deadline ? editableProject.deadline.split('T')[0] : ''} onChange={handleDateChange} className={inputClasses} />
+                        <input type="date" id="deadline" name="deadline" value={editableProject.deadline.split('T')[0]} onChange={handleDateChange} className={inputClasses} />
                     </div>
                      <div>
                         <label htmlFor="status" className="block mb-2 text-sm font-medium text-white">Статус</label>
@@ -231,7 +192,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                 <div>
                     <label htmlFor="tags" className="block mb-2 text-sm font-medium text-white">Теги</label>
                     <div className="flex flex-wrap gap-2 items-center p-2 border border-slate-600 rounded-lg bg-slate-700">
-                        {(editableProject.tags || []).map(tag => (
+                        {editableProject.tags.map(tag => (
                             <span key={tag} className="flex items-center bg-blue-900 text-blue-300 text-xs font-medium px-2 py-1 rounded-full">
                                 {tag}
                                 <button onClick={() => handleRemoveTag(tag)} className="ml-1.5 -mr-0.5 p-0.5 rounded-full hover:bg-blue-700">
@@ -259,47 +220,41 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                 {/* Attachments */}
                  <div>
                     <h4 className="text-md font-semibold text-slate-200 mb-2">Вложения</h4>
-                    {editableProject.attachments.length > 0 && (
+                    {validAttachments.length > 0 && (
                         <ul className="border border-slate-700 rounded-lg divide-y divide-slate-700 mb-4">
-                           {editableProject.attachments.map(att => {
-                                const fileId = att.directus_files_id?.id;
-                                const fileUrl = fileId ? `${DIRECTUS_URL}/assets/${fileId}?access_token=${DIRECTUS_TOKEN}` : null;
-                                let finalUrl: string | null = null;
-                                if (att.url) {
-                                    finalUrl = /^https?:\/\//i.test(att.url) ? att.url : `https://${att.url}`;
-                                } else if (fileUrl) {
-                                    finalUrl = fileUrl;
-                                }
-                                const title = (att.title && att.title.trim())
-                                    || (att.directus_files_id?.title && att.directus_files_id.title.trim())
-                                    || (att as any).directus_files_id?.filename_download
-                                    || (att.url ? att.url.replace(/^https?:\/\/(www\.)?/i, '').split(/[?#]/)[0] : '')
-                                    || 'Файл';
-                                const content = (
-                                    <>
-                                        {att.url ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{title}</p>
-                                            {att.directus_files_id && <p className="text-xs text-slate-400 truncate">{att.directus_files_id.type}, {(att.directus_files_id.filesize / 1024).toFixed(2)} KB</p>}
-                                        </div>
-                                    </>
-                                );
+                           {validAttachments.map(att => {
+                                const isLink = !!att.url;
+                                const isFile = !!att.directus_files_id;
+                                
+                                const fileUrl = isFile ? `${DIRECTUS_URL}/assets/${att.directus_files_id.id}?access_token=${DIRECTUS_TOKEN}` : '#';
+                                const finalUrl = att.url || fileUrl;
+                                
+                                const title = att.title || (isFile ? att.directus_files_id.title : '') || 'Без названия';
+                                
+                                const subtitle = isFile
+                                    ? `${att.directus_files_id.type}, ${(att.directus_files_id.filesize / 1024).toFixed(2)} KB`
+                                    : att.url;
+
                                 return (
                                     <li key={att.id} className="p-3 flex items-center justify-between hover:bg-slate-700/50">
-                                        {finalUrl ? (
-                                            <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0 group" title={title}>
-                                                {content}
-                                            </a>
-                                        ) : (
-                                            <div className="flex items-center min-w-0 group" title={title}>
-                                                {content}
+                                        <a 
+                                            href={finalUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center min-w-0 flex-grow group"
+                                            title={title}
+                                        >
+                                            {isLink ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{title}</p>
+                                                <p className="text-xs text-slate-400 truncate">{subtitle}</p>
                                             </div>
-                                        )}
-                                        <button onClick={() => handleRemoveAttachment(att.id)} className="ml-2 p-1.5 rounded-full hover:bg-red-900/50 text-slate-400 hover:text-red-400" title="Удалить вложение">
+                                        </a>
+                                        <button onClick={() => handleRemoveAttachment(att.id)} className="ml-4 p-1.5 rounded-full hover:bg-red-900/50 text-slate-400 hover:text-red-400 flex-shrink-0" title="Удалить вложение">
                                             <TrashIcon className="w-4 h-4" />
                                         </button>
                                     </li>
-                                );
+                               );
                            })}
                         </ul>
                     )}
@@ -323,7 +278,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                              }
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                        <button
+                         <button
                             type="button"
                             onClick={() => setIsAddingLink(!isAddingLink)}
                             className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-600 border border-slate-500 rounded-lg shadow-sm hover:bg-slate-500"
@@ -363,18 +318,14 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                 {/* History */}
                 <div>
                     <h4 className="text-md font-semibold text-slate-200 mb-2">История изменений</h4>
-                    {editableProject.history && editableProject.history.length > 0 ? (
-                        <ul className="space-y-2 text-sm">
-                            {editableProject.history.map(log => (
-                                <li key={log.id} className="flex items-center text-slate-400">
-                                    <ClockIcon className="w-4 h-4 mr-2 flex-shrink-0" />
-                                    {new Date(log.timestamp).toLocaleString('ru-RU')} - <span className="font-medium text-slate-300 mx-1">{log.user}</span> - {log.action}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-slate-400 italic">История изменений пока пуста</p>
-                    )}
+                    <ul className="space-y-2 text-sm">
+                        {editableProject.history.map(log => (
+                            <li key={log.id} className="flex items-center text-slate-400">
+                                <ClockIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                                {new Date(log.timestamp).toLocaleString('ru-RU')} - <span className="font-medium text-slate-300 mx-1">{log.user}</span> - {log.action}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
             </div>
