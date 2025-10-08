@@ -21,9 +21,8 @@ const getAuthHeaders = () => ({
 
 export const getProjects = async (): Promise<Project[]> => {
     // Fetch projects and their related attachments (files) in one go.
-    // By adding `attachments.*`, we explicitly ask for all fields from the junction table,
-    // which helps Directus build the correct SQL query.
-    const response = await fetch(`${DIRECTUS_URL}/items/projects?fields=*,attachments.*,attachments.directus_files_id.*`);
+    // Use deep parameter to request nested relation fields, avoiding potential fields parser issues.
+    const response = await fetch(`${DIRECTUS_URL}/items/projects?fields=*&deep[attachments][_fields]=*,directus_files_id.*`);
     return handleResponse(response);
 };
 

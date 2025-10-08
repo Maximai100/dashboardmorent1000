@@ -110,15 +110,41 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     };
 
     const handleSaveChanges = () => {
-        // Before saving, we need to format the attachments to send only the file IDs.
-        // Directus M2M updates expect an array of primary keys of the related items.
-        // We filter out any non-file attachments to prevent errors.
+        // Deep relational update for M2M `attachments` to avoid integer/uuid mismatch on junction id
+        // - create: new links by directus_files_id (uploaded during this session have temporary id -1)
+        // - delete: removed junction ids compared to original project
+        const originalById = new Map<number, ProjectAttachment>(
+            (project.attachments || []).map(att => [att.id, att])
+        );
+
+        const currentById = new Map<number, ProjectAttachment>(
+            (editableProject.attachments || []).map(att => [att.id, att])
+        );
+
+        const toDelete: number[] = [];
+        for (const [junctionId] of originalById) {
+            if (!currentById.has(junctionId)) {
+                toDelete.push(junctionId);
+            }
+        }
+
+        const toCreate: { directus_files_id: string }[] = [];
+        for (const att of editableProject.attachments || []) {
+            const isNew = att.id < 0;
+            const fileId = att.directus_files_id?.id;
+            if (isNew && fileId) {
+                toCreate.push({ directus_files_id: fileId });
+            }
+        }
+
         const projectToSave = {
             ...editableProject,
-            attachments: (editableProject.attachments || [])
-                .map(att => att.directus_files_id?.id)
-                .filter((id): id is string => !!id)
-        };
+            attachments: {
+                ...(toCreate.length > 0 ? { create: toCreate } : {}),
+                ...(toDelete.length > 0 ? { delete: toDelete } : {}),
+            },
+        } as any;
+
         onSave(projectToSave as any);
     };
     
