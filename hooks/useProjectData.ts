@@ -85,16 +85,9 @@ export const useProjectData = () => {
     };
 
     const loadProjectAttachments = async (projectId: string) => {
-        try {
-            const attachments = await directusService.getProjectAttachments(projectId);
-            setProjects(prev => prev.map(p => 
-                p.id === projectId ? { ...p, attachments } : p
-            ));
-            return attachments;
-        } catch (err: any) {
-            console.warn(`Failed to load attachments for project ${projectId}:`, err);
-            return [];
-        }
+        // Temporarily disabled to avoid M2M issues
+        console.warn('Attachments loading is temporarily disabled to avoid M2M issues');
+        return [];
     };
 
     return { 

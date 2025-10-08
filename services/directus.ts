@@ -20,17 +20,16 @@ const getAuthHeaders = () => ({
 // --- Projects API ---
 
 export const getProjects = async (): Promise<Project[]> => {
-    // Fetch projects without attachments to avoid M2M query issues
-    // Attachments will be loaded separately if needed
+    // Fetch projects without any attachments to avoid M2M query issues
     const response = await fetch(`${DIRECTUS_URL}/items/projects`);
     return handleResponse(response);
 };
 
-export const getProjectAttachments = async (projectId: string): Promise<ProjectAttachment[]> => {
-    // Get attachments for a specific project with explicit field selection
-    const response = await fetch(`${DIRECTUS_URL}/items/projects_files?filter[projects_id][_eq]=${projectId}&fields=id,projects_id,directus_files_id,url,title`);
-    return handleResponse(response);
-};
+// Temporarily disable attachments loading to avoid M2M issues
+// export const getProjectAttachments = async (projectId: string): Promise<ProjectAttachment[]> => {
+//     const response = await fetch(`${DIRECTUS_URL}/items/projects_files?filter[projects_id][_eq]=${projectId}&fields=id,projects_id,directus_files_id,url,title`);
+//     return handleResponse(response);
+// };
 
 export const createProject = async (projectData: Omit<Project, 'id'>): Promise<Project> => {
     // For new projects, exclude all JSON fields that might cause issues
