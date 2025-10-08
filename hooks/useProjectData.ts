@@ -59,6 +59,11 @@ export const useProjectData = () => {
     const updateProject = async (id: string, updatedProjectData: Partial<Project>) => {
         try {
             const updatedProject = await directusService.updateProject(id, updatedProjectData);
+            // Ensure attachments include nested file data; fallback to fetch attachments
+            if (!updatedProject.attachments || updatedProject.attachments.some(a => a.directus_files_id && typeof (a as any).directus_files_id === 'string')) {
+                const freshAttachments = await directusService.getProjectAttachments(id);
+                updatedProject.attachments = freshAttachments as any;
+            }
             setProjects(prev => prev.map(p => p.id === id ? updatedProject : p));
         } catch (err: any) {
             setError(err.message || 'Failed to update project');

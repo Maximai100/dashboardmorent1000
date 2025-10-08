@@ -26,8 +26,8 @@ export const getProjects = async (): Promise<Project[]> => {
 };
 
 export const getProjectAttachments = async (projectId: string): Promise<ProjectAttachment[]> => {
-    // Get attachments for a specific project with explicit field selection
-    const response = await fetch(`${DIRECTUS_URL}/items/projects_files?filter[projects_id][_eq]=${projectId}&fields=id,projects_id,directus_files_id,url,title`);
+    // Get attachments for a specific project with nested file fields expanded
+    const response = await fetch(`${DIRECTUS_URL}/items/projects_files?filter[projects_id][_eq]=${projectId}&fields=id,projects_id,url,title,directus_files_id.*`);
     return handleResponse(response);
 };
 
