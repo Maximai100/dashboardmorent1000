@@ -3,27 +3,29 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import type { Column } from '../types';
 import { ColumnType, AttributeType } from '../types';
-import { DocumentTextIcon, TagIcon, CalculatorIcon, ArrowRightIcon } from './icons/Icons';
+import { DocumentTextIcon, TagIcon, ArrowRightIcon, TrashIcon, SpinnerIcon } from './icons/Icons';
 
 interface AddColumnModalProps {
     onClose: () => void;
-    onAddColumn: (newColumn: Column) => void;
+    onAddColumn: (newColumn: Column) => Promise<void> | void;
+    onDeleteColumn: (columnId: string) => Promise<void> | void;
+    existingColumns: Column[];
 }
 
-const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAddColumn }) => {
+const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAddColumn, onDeleteColumn, existingColumns }) => {
     const [step, setStep] = useState(1);
-    // FIX: Narrow down the columnType to only types that can be created from this modal.
-    // This resolves the TypeScript error where ColumnType could be 'CALCULATED' which is not part of the `Column` union type.
     const [columnType, setColumnType] = useState<ColumnType.DOCUMENT | ColumnType.ATTRIBUTE | null>(null);
     const [columnName, setColumnName] = useState('');
     const [isDocumentRequired, setIsDocumentRequired] = useState(false);
     const [trackExpiration, setTrackExpiration] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deletingColumnId, setDeletingColumnId] = useState<string | null>(null);
     
     const handleNext = () => {
         if (columnType) setStep(2);
     };
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!columnName.trim() || !columnType) return;
 
         const newColumn: Column = {
@@ -33,7 +35,35 @@ const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAddColumn })
             ...(columnType === ColumnType.DOCUMENT && { required: isDocumentRequired, trackExpiration: trackExpiration }),
             ...(columnType === ColumnType.ATTRIBUTE && { attributeType: AttributeType.TEXT }), // Default to TEXT
         };
-        onAddColumn(newColumn);
+        try {
+            setIsSubmitting(true);
+            await onAddColumn(newColumn);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (columnId: string, locked: boolean) => {
+        if (locked) return;
+        try {
+            setDeletingColumnId(columnId);
+            await onDeleteColumn(columnId);
+        } finally {
+            setDeletingColumnId(prev => (prev === columnId ? null : prev));
+        }
+    };
+    
+    const renderColumnMeta = (column: Column) => {
+        switch (column.type) {
+            case ColumnType.DOCUMENT:
+                return column.trackExpiration ? 'Документ · Сроки' : 'Документ';
+            case ColumnType.ATTRIBUTE:
+                return `Атрибут · ${column.attributeType ?? AttributeType.TEXT}`;
+            case ColumnType.OWNER:
+                return 'Системная колонка';
+            default:
+                return column.type;
+        }
     };
     
     const renderStep1 = () => (
@@ -108,9 +138,10 @@ const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAddColumn })
                     <button
                         type="button"
                         onClick={handleAdd}
-                        disabled={!columnName.trim()}
-                        className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 disabled:bg-blue-500 disabled:cursor-not-allowed"
+                        disabled={!columnName.trim() || isSubmitting}
+                        className="inline-flex items-center justify-center gap-2 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 disabled:bg-blue-500 disabled:cursor-not-allowed"
                     >
+                        {isSubmitting && <SpinnerIcon className="w-4 h-4 animate-spin" />}
                         Добавить колонку
                     </button>
                 </>
@@ -122,6 +153,45 @@ const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAddColumn })
         <Modal title="Мастер создания новой колонки" onClose={onClose} footer={<div className="flex space-x-2">{footerContent()}</div>}>
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
+
+            <div className="mt-6">
+                <h4 className="text-md font-semibold text-slate-200 mb-3">Существующие колонки</h4>
+                {existingColumns.length === 0 ? (
+                    <p className="text-sm text-slate-400">Колонки ещё не созданы.</p>
+                ) : (
+                    <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {existingColumns.map(column => {
+                            const isLocked = column.type === ColumnType.OWNER;
+                            const isDeleting = deletingColumnId === column.id;
+                            return (
+                                <li key={column.id} className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700 rounded-lg">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-white truncate">{column.name}</p>
+                                        <p className="text-xs text-slate-400 mt-1 truncate">{renderColumnMeta(column)}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDelete(column.id, isLocked)}
+                                        disabled={isLocked || isDeleting}
+                                        className={`inline-flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+                                            isLocked
+                                                ? 'text-slate-500 cursor-not-allowed border border-slate-600'
+                                                : 'text-red-300 border border-red-500/40 hover:bg-red-900/40'
+                                        }`}
+                                    >
+                                        {isDeleting ? (
+                                            <SpinnerIcon className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <TrashIcon className="w-4 h-4" />
+                                        )}
+                                        <span>{isLocked ? 'Системная' : 'Удалить'}</span>
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
         </Modal>
     );
 };

@@ -31,7 +31,18 @@ const LoadingFallback: React.FC = () => (
 
 const App: React.FC = () => {
     const { isAuthenticated, user, logout } = useAuth();
-    const { owners, setOwners, columns, setColumns, loading, error, addOwner, updateOwner, deleteOwner } = useOwnersData();
+    const { 
+        owners, 
+        columns, 
+        loading, 
+        error, 
+        addOwner, 
+        updateOwner, 
+        deleteOwner, 
+        addColumn, 
+        deleteColumn, 
+        reorderColumns 
+    } = useOwnersData();
     const [modalData, setModalData] = useState<ModalData | null>(null);
     const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
     const [isAddOwnerModalOpen, setIsAddOwnerModalOpen] = useState(false);
@@ -105,42 +116,29 @@ const App: React.FC = () => {
         return sorted;
     }, [owners, columns, sortConfig]);
 
-    const handleAddColumn = useCallback((newColumn: Column) => {
-        setColumns(prev => [...prev, newColumn]);
-        // This logic would need to be adapted for a real backend, 
-        // likely involving batch updates or a dedicated API endpoint.
-        // For now, it updates the local state optimistically.
-        setOwners(prevOwners => prevOwners.map(owner => ({
-            ...owner,
-            data: {
-                ...owner.data,
-                [newColumn.id]: newColumn.type === ColumnType.DOCUMENT ? {
-                    status: 'Нет',
-                    versions: [],
-                    notes: '',
-                } : { value: '' }
-            }
-        })));
-        setIsAddColumnModalOpen(false);
-    }, [setColumns, setOwners]);
+    const handleAddColumn = useCallback(async (newColumn: Column) => {
+        try {
+            await addColumn(newColumn);
+            setIsAddColumnModalOpen(false);
+        } catch (error: any) {
+            console.error('Failed to add column:', error);
+            window.alert(error?.message || 'Не удалось создать колонку. Проверьте права доступа и повторите попытку.');
+        }
+    }, [addColumn]);
 
-    const handleDeleteColumn = (columnId: string) => {
+    const handleDeleteColumn = useCallback(async (columnId: string) => {
         const columnToDelete = columns.find(c => c.id === columnId);
         if (!columnToDelete) return;
 
         if (window.confirm(`Вы уверены, что хотите удалить колонку "${columnToDelete.name}"? Все связанные с ней данные будут безвозвратно утеряны.`)) {
-            setColumns(prev => prev.filter(col => col.id !== columnId));
-            // Again, backend logic would be needed here.
-            setOwners(prevOwners => prevOwners.map(owner => {
-                const newData = { ...owner.data };
-                delete newData[columnId];
-                return {
-                    ...owner,
-                    data: newData
-                };
-            }));
+            try {
+                await deleteColumn(columnId);
+            } catch (error: any) {
+                console.error('Failed to delete column:', error);
+                window.alert(error?.message || 'Не удалось удалить колонку. Проверьте права доступа и повторите попытку.');
+            }
         }
-    };
+    }, [columns, deleteColumn]);
 
     const handleAddNewOwner = useCallback(async (newOwnerData: Omit<Owner, 'id' | 'data'>) => {
         const newOwner: Omit<Owner, 'id'> = {
@@ -162,6 +160,14 @@ const App: React.FC = () => {
         setModalData(null);
     };
 
+    const handleReorderColumns = useCallback((sourceColumnId: string, targetColumnId: string) => {
+        if (sourceColumnId === targetColumnId) return;
+        reorderColumns(sourceColumnId, targetColumnId).catch(error => {
+            console.error('Failed to reorder columns:', error);
+            window.alert(error?.message || 'Не удалось изменить порядок колонок. Попробуйте ещё раз.');
+        });
+    }, [reorderColumns]);
+
     const handleDeleteOwner = async (ownerId: string) => {
         await deleteOwner(ownerId);
         setModalData(null);
@@ -169,16 +175,46 @@ const App: React.FC = () => {
     
     const handleUpdateOwnerData = (ownerId: string, columnId: string, newData: any) => {
         const ownerToUpdate = owners.find(o => o.id === ownerId);
-        if (ownerToUpdate) {
-            const updatedData = {
-                ...ownerToUpdate.data,
-                [columnId]: {
-                    ...ownerToUpdate.data[columnId],
-                    ...newData,
-                }
-            };
-            updateOwner(ownerId, { data: updatedData });
-        }
+        if (!ownerToUpdate) return;
+
+        const existingEntry = ownerToUpdate.data?.[columnId];
+        const normalizedEntry = (existingEntry && typeof existingEntry === 'object') ? existingEntry : {};
+
+        const updatedData = {
+            ...ownerToUpdate.data,
+            [columnId]: {
+                ...normalizedEntry,
+                ...newData,
+            },
+        };
+
+        updateOwner(ownerId, { data: updatedData });
+    };
+
+    const normalizeDocumentData = (data: any): DocumentData => {
+        const normalizedVersions = Array.isArray(data?.versions)
+            ? data.versions.map((version: any, index: number) => {
+                const fallbackId = typeof version?.id === 'string' ? version.id : `v-${index + 1}`;
+                return {
+                    id: fallbackId,
+                    version: typeof version?.version === 'number' ? version.version : index + 1,
+                    fileName: typeof version?.fileName === 'string' ? version.fileName : (version?.filename_download || version?.title || `Файл ${index + 1}`),
+                    uploadDate: typeof version?.uploadDate === 'string'
+                        ? version.uploadDate
+                        : (typeof version?.uploaded_on === 'string' ? version.uploaded_on.split('T')[0] : ''),
+                    fileId: typeof version?.fileId === 'string' && version.fileId ? version.fileId : fallbackId,
+                    filesize: typeof version?.filesize === 'number' ? version.filesize : undefined,
+                };
+            })
+            : [];
+
+        return {
+            status: typeof data?.status === 'string' ? data.status : 'Нет',
+            signingDate: typeof data?.signingDate === 'string' ? data.signingDate : undefined,
+            expirationDate: typeof data?.expirationDate === 'string' ? data.expirationDate : undefined,
+            versions: normalizedVersions,
+            notes: typeof data?.notes === 'string' ? data.notes : '',
+        };
     };
 
     const renderModal = () => {
@@ -201,18 +237,18 @@ const App: React.FC = () => {
                         case 'document': {
                             const docColumn = columns.find(c => c.id === modalData.columnId);
                             if (docColumn && docColumn.type === ColumnType.DOCUMENT) {
-                                const documentData = owner.data[modalData.columnId] as DocumentData;
-                                if (documentData && 'status' in documentData) {
-                                    return (
-                                        <DocumentModal
-                                            ownerName={owner.name}
-                                            documentName={docColumn.name}
-                                            documentData={documentData}
-                                            onClose={() => setModalData(null)}
-                                            onUpdate={(newData) => handleUpdateOwnerData(modalData.ownerId, modalData.columnId, newData)}
-                                        />
-                                    );
-                                }
+                                const existingDocumentData = owner.data[modalData.columnId] as DocumentData | undefined;
+                                const normalizedDocumentData = normalizeDocumentData(existingDocumentData);
+
+                                return (
+                                    <DocumentModal
+                                        ownerName={owner.name}
+                                        documentName={docColumn.name}
+                                        documentData={normalizedDocumentData}
+                                        onClose={() => setModalData(null)}
+                                        onUpdate={(newData) => handleUpdateOwnerData(modalData.ownerId, modalData.columnId, newData)}
+                                    />
+                                );
                             }
                             return null;
                         }
@@ -240,40 +276,6 @@ const App: React.FC = () => {
         );
     };
     
-    const renderContent = () => {
-        if (loading) {
-            return (
-                <div className="flex justify-center items-center h-64">
-                    <SpinnerIcon className="w-8 h-8 animate-spin text-blue-500" />
-                    <p className="ml-4 text-slate-400">Загрузка данных...</p>
-                </div>
-            );
-        }
-
-        if (error) {
-            return (
-                <div className="text-center py-16 bg-red-900/20 border border-red-500/30 rounded-lg">
-                    <h3 className="text-lg font-medium text-red-400">Ошибка при загрузке данных</h3>
-                    <p className="mt-1 text-sm text-slate-400">{error}</p>
-                    <p className="mt-2 text-xs text-slate-500">Убедитесь, что Directus запущен и конфигурация в `config.ts` верна.</p>
-                </div>
-            );
-        }
-
-        return (
-            <ResponsiveDashboard
-                owners={sortedOwners}
-                columns={columns}
-                onCellClick={setModalData}
-                onAddColumn={() => setIsAddColumnModalOpen(true)}
-                onDeleteColumn={handleDeleteColumn}
-                sortConfig={sortConfig}
-                onSort={handleSort}
-            />
-        );
-    };
-
-
     const renderOwnersDashboard = () => (
         <>
             <header className="mb-6 flex justify-between items-center flex-wrap gap-4">
@@ -305,7 +307,18 @@ const App: React.FC = () => {
                 </div>
             )}
             <main>
-                {renderContent()}
+                <ResponsiveDashboard
+                    owners={sortedOwners}
+                    columns={columns}
+                    loading={loading}
+                    error={error}
+                    onCellClick={setModalData}
+                    onAddColumn={() => setIsAddColumnModalOpen(true)}
+                    onDeleteColumn={handleDeleteColumn}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
+                    onReorderColumns={handleReorderColumns}
+                />
             </main>
             {renderModal()}
             {isAddOwnerModalOpen && (
@@ -321,6 +334,8 @@ const App: React.FC = () => {
                     <AddColumnModal
                         onClose={() => setIsAddColumnModalOpen(false)}
                         onAddColumn={handleAddColumn}
+                        onDeleteColumn={handleDeleteColumn}
+                        existingColumns={columns}
                     />
                 </Suspense>
             )}

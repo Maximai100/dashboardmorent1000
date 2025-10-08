@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Owner, Column, ModalData, DocumentData, AttributeData } from '../types';
 import { ColumnType } from '../types';
 import { DocumentCell } from './DocumentCell';
-import { PlusIcon, TableCellsIcon, XMarkIcon, ArrowUpIcon, ArrowDownIcon } from './icons/Icons';
+import { PlusIcon, TableCellsIcon, XMarkIcon, ArrowUpIcon, ArrowDownIcon, SpinnerIcon } from './icons/Icons';
 
 interface DashboardProps {
     owners: Owner[];
     columns: Column[];
     onCellClick: (data: ModalData) => void;
     onAddColumn: () => void;
-    onDeleteColumn: (columnId: string) => void;
+    onDeleteColumn: (columnId: string) => Promise<void> | void;
     sortConfig: { key: string | null; direction: 'asc' | 'desc' };
     onSort: (columnId: string) => void;
+    onReorderColumns: (sourceColumnId: string, targetColumnId: string) => void;
+    loading: boolean;
+    error: string | null;
 }
 
 const AttributeCell: React.FC<{ data: AttributeData }> = ({ data }) => {
@@ -34,7 +37,72 @@ const OwnerCell: React.FC<{ owner: Owner }> = ({ owner }) => {
 };
 
 
-const Dashboard: React.FC<DashboardProps> = ({ owners, columns, onCellClick, onAddColumn, onDeleteColumn, sortConfig, onSort }) => {
+const Dashboard: React.FC<DashboardProps> = ({ owners, columns, onCellClick, onAddColumn, onDeleteColumn, sortConfig, onSort, onReorderColumns, loading, error }) => {
+
+    const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
+    const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16 bg-slate-800 rounded-lg shadow-md">
+                <SpinnerIcon className="w-8 h-8 animate-spin text-blue-500 mb-3" />
+                <p className="text-sm text-slate-400">Загружаем данные...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-16 bg-red-900/20 border border-red-500/30 rounded-lg">
+                <h3 className="text-lg font-medium text-red-400">Ошибка при загрузке данных</h3>
+                <p className="mt-1 text-sm text-slate-400">{error}</p>
+                <p className="mt-2 text-xs text-slate-500">Попробуйте обновить страницу или проверьте настройки Directus.</p>
+            </div>
+        );
+    }
+
+    const handleDragStart = (event: React.DragEvent<HTMLTableCellElement>, columnId: string) => {
+        setDraggedColumnId(columnId);
+        setIsDragging(true);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', columnId);
+    };
+
+    const handleDragOver = (event: React.DragEvent<HTMLTableCellElement>, columnId: string) => {
+        if (!draggedColumnId || draggedColumnId === columnId) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        setDragOverColumnId(columnId);
+    };
+
+    const handleDragEnter = (columnId: string) => {
+        if (!draggedColumnId || draggedColumnId === columnId) return;
+        setDragOverColumnId(columnId);
+    };
+
+    const handleDragLeave = (columnId: string) => {
+        if (dragOverColumnId === columnId) {
+            setDragOverColumnId(null);
+        }
+    };
+
+    const handleDrop = (event: React.DragEvent<HTMLTableCellElement>, columnId: string) => {
+        event.preventDefault();
+        const sourceId = draggedColumnId || event.dataTransfer.getData('text/plain');
+        if (sourceId && sourceId !== columnId) {
+            onReorderColumns(sourceId, columnId);
+        }
+        setDraggedColumnId(null);
+        setDragOverColumnId(null);
+        setIsDragging(false);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedColumnId(null);
+        setDragOverColumnId(null);
+        setIsDragging(false);
+    };
     
     const SortIndicator = ({ columnKey }: { columnKey: string }) => {
         if (sortConfig.key !== columnKey) return null;
@@ -59,19 +127,34 @@ const Dashboard: React.FC<DashboardProps> = ({ owners, columns, onCellClick, onA
                 <table className="min-w-full divide-y divide-slate-700">
                     <thead className="bg-slate-700">
                         <tr>
-                            {columns.map((col) => (
+                            {columns.map((col) => {
+                                const isDropTarget = dragOverColumnId === col.id && draggedColumnId !== col.id;
+                                return (
                                 <th 
                                     key={col.id} 
                                     scope="col" 
-                                    className="group relative px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider whitespace-nowrap cursor-pointer hover:text-slate-200"
-                                    onClick={() => onSort(col.id)}
+                                    className={`group relative px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider whitespace-nowrap cursor-pointer hover:text-slate-200 ${isDropTarget ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
+                                    onClick={() => {
+                                        if (isDragging) return;
+                                        onSort(col.id);
+                                    }}
+                                    draggable
+                                    onDragStart={(event) => handleDragStart(event, col.id)}
+                                    onDragOver={(event) => handleDragOver(event, col.id)}
+                                    onDragEnter={() => handleDragEnter(col.id)}
+                                    onDragLeave={() => handleDragLeave(col.id)}
+                                    onDrop={(event) => handleDrop(event, col.id)}
+                                    onDragEnd={handleDragEnd}
                                 >
                                     <div className="flex items-center">
                                         {col.name}
                                         <SortIndicator columnKey={col.id} />
-                                        {col.id !== 'owner' && (
+                                        {col.type !== ColumnType.OWNER && (
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); onDeleteColumn(col.id); }}
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    await onDeleteColumn(col.id);
+                                                }}
                                                 className="absolute top-1/2 right-1 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:bg-red-900/50 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
                                                 title={`Удалить колонку "${col.name}"`}
                                             >
@@ -81,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ owners, columns, onCellClick, onA
                                         )}
                                     </div>
                                 </th>
-                            ))}
+                            )})}
                             <th scope="col" className="relative px-6 py-3">
                                 <button
                                     onClick={onAddColumn}

@@ -1,6 +1,7 @@
 import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../config';
 import type { Project } from '../types/manager';
 import type { Owner } from '../types';
+import { ColumnType, AttributeType } from '../types';
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
@@ -109,6 +110,61 @@ export const deleteOwner = async (id: string): Promise<void> => {
     }
 }
 
+// --- Owners Columns API ---
+
+interface OwnersColumnRecord {
+    id: string;
+    name: string;
+    type: ColumnType;
+    required?: boolean | null;
+    trackExpiration?: boolean | null;
+    attributeType?: AttributeType | null;
+    sort?: number | null;
+}
+
+type OwnersColumnPayload = {
+    id: string;
+    name: string;
+    type: ColumnType;
+    required?: boolean;
+    trackExpiration?: boolean;
+    attributeType?: AttributeType | null;
+    sort?: number;
+};
+
+export const getColumns = async (): Promise<OwnersColumnRecord[]> => {
+    const response = await fetch(`${DIRECTUS_URL}/items/owners_columns?sort=sort`);
+    return handleResponse(response);
+};
+
+export const createColumn = async (columnData: OwnersColumnPayload): Promise<OwnersColumnRecord> => {
+    const response = await fetch(`${DIRECTUS_URL}/items/owners_columns`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(columnData),
+    });
+    return handleResponse(response);
+};
+
+export const updateColumn = async (id: string, columnData: Partial<OwnersColumnPayload>): Promise<OwnersColumnRecord> => {
+    const response = await fetch(`${DIRECTUS_URL}/items/owners_columns/${id}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(columnData),
+    });
+    return handleResponse(response);
+};
+
+export const deleteColumn = async (id: string): Promise<void> => {
+    const response = await fetch(`${DIRECTUS_URL}/items/owners_columns/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error('Failed to delete column');
+    }
+};
+
 
 // --- File Upload API ---
 
@@ -116,7 +172,7 @@ export const uploadFile = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${DIRECTUS_URL}/files`, {
+    const response = await fetch(`${DIRECTUS_URL}/files?fields=id,title,filesize,type,filename_disk,filename_download,uploaded_on`, {
         method: 'POST',
         headers: {
             // Note: Don't set Content-Type for FormData, the browser does it.

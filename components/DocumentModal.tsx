@@ -1,8 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import type { DocumentData, DocumentStatus } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import type { DocumentData, DocumentStatus, DocumentVersion } from '../types';
 import Modal from './Modal';
-import { DocumentDuplicateIcon, ArrowDownTrayIcon, ClockIcon, PaperClipIcon, PencilIcon, PlusIcon, XMarkIcon } from './icons/Icons';
+import { DocumentDuplicateIcon, ArrowDownTrayIcon, ClockIcon, PaperClipIcon, PencilIcon, PlusIcon, XMarkIcon, SpinnerIcon, TrashIcon } from './icons/Icons';
+import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../config';
+import * as directusService from '../services/directus';
 
 interface DocumentModalProps {
     ownerName: string;
@@ -14,9 +16,37 @@ interface DocumentModalProps {
 
 const documentStatuses: DocumentStatus[] = ['Есть', 'Нет', 'Истек', 'Скоро истекает'];
 
+const getAssetsBaseUrl = () => (DIRECTUS_URL.endsWith('/') ? DIRECTUS_URL.slice(0, -1) : DIRECTUS_URL);
+
+const getDownloadUrl = (version: DocumentVersion & { fileUrl?: string }) => {
+    const effectiveFileId = version.fileId || version.id;
+    if (effectiveFileId) {
+        const tokenSuffix = DIRECTUS_TOKEN ? `?access_token=${DIRECTUS_TOKEN}` : '';
+        return `${getAssetsBaseUrl()}/assets/${effectiveFileId}${tokenSuffix}`;
+    }
+    if (version.fileUrl) {
+        return version.fileUrl;
+    }
+    return '#';
+};
+
+const formatFileSize = (bytes?: number) => {
+    if (typeof bytes !== 'number' || !Number.isFinite(bytes)) {
+        return '';
+    }
+    if (bytes === 0) return '0 Б';
+    const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+    const index = Math.floor(Math.log(bytes) / Math.log(1024));
+    const value = bytes / Math.pow(1024, index);
+    return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[index]}`;
+};
+
 const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, documentData, onClose, onUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editableData, setEditableData] = useState<DocumentData>(documentData);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         setEditableData(documentData);
@@ -37,15 +67,65 @@ const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, 
         setIsEditing(false);
     };
 
-    const handleUploadVersion = () => {
-        const newVersion = {
-            id: `v${Date.now()}`,
-            version: (editableData.versions?.length || 0) + 1,
-            fileName: `Новый_файл_${new Date().toLocaleDateString()}.pdf`,
-            uploadDate: new Date().toISOString().split('T')[0],
-            fileUrl: '#',
-        };
-        setEditableData(prev => ({...prev, versions: [...(prev.versions || []), newVersion]}));
+    const handleUploadVersionClick = () => {
+        if (isUploading) return;
+        setUploadError(null);
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            event.target.value = '';
+            return;
+        }
+
+        setIsUploading(true);
+        setUploadError(null);
+
+        try {
+            const uploadedFile = await directusService.uploadFile(file);
+            const fileId = uploadedFile?.id || `file-${Date.now()}`;
+            const uploadedOn = uploadedFile?.uploaded_on || new Date().toISOString();
+            const formattedDate = uploadedOn.split('T')[0];
+
+            const newVersion: DocumentVersion = {
+                id: fileId,
+                version: (Array.isArray(editableData.versions) ? editableData.versions.length : 0) + 1,
+                fileName: uploadedFile?.filename_download || uploadedFile?.title || file.name,
+                uploadDate: formattedDate,
+                fileId,
+                filesize: typeof uploadedFile?.filesize === 'number' ? uploadedFile.filesize : file.size,
+            };
+
+            setEditableData(prev => {
+                const existingVersions = Array.isArray(prev.versions) ? prev.versions : [];
+                return {
+                    ...prev,
+                    versions: [...existingVersions, newVersion],
+                };
+            });
+        } catch (error: any) {
+            setUploadError(error?.message || 'Не удалось загрузить файл. Повторите попытку.');
+        } finally {
+            setIsUploading(false);
+            event.target.value = '';
+        }
+    };
+
+    const handleDeleteVersion = (versionId: string) => {
+        setEditableData(prev => {
+            const existingVersions = Array.isArray(prev.versions) ? prev.versions : [];
+            const filtered = existingVersions.filter(v => v.id !== versionId);
+
+            return {
+                ...prev,
+                versions: filtered.map((version, index) => ({
+                    ...version,
+                    version: index + 1,
+                })),
+            };
+        });
     };
 
     const renderFooter = () => {
@@ -148,12 +228,38 @@ const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, 
                      <div className="flex justify-between items-center mb-2">
                         <h4 className="text-md font-semibold text-slate-200">Версии документа</h4>
                         {isEditing && (
-                            <button onClick={handleUploadVersion} type="button" className="inline-flex items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300">
-                                <PlusIcon className="w-4 h-4"/>
-                                Добавить версию
+                            <button
+                                onClick={handleUploadVersionClick}
+                                type="button"
+                                disabled={isUploading}
+                                className="inline-flex items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <SpinnerIcon className="w-4 h-4 animate-spin" />
+                                        Загрузка...
+                                    </>
+                                ) : (
+                                    <>
+                                        <PlusIcon className="w-4 h-4"/>
+                                        Добавить файл
+                                    </>
+                                )}
                             </button>
                         )}
                     </div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xls,.xlsx"
+                        onChange={handleFileSelection}
+                        className="hidden"
+                    />
+                    {uploadError && (
+                        <p className="mt-2 text-xs text-red-400">
+                            {uploadError}
+                        </p>
+                    )}
                     {(editableData.versions || []).length > 0 ? (
                         <ul className="border border-slate-700 rounded-lg divide-y divide-slate-700">
                             {editableData.versions.map(v => (
@@ -162,12 +268,31 @@ const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, 
                                         <PaperClipIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />
                                         <div className="min-w-0">
                                             <p className="text-sm font-medium text-white truncate">{v.fileName}</p>
-                                            <p className="text-xs text-slate-400">Версия {v.version}, загружен {v.uploadDate}</p>
+                                            <p className="text-xs text-slate-400">
+                                                Версия {v.version}, загружен {v.uploadDate}
+                                                {typeof v.filesize === 'number' ? ` · ${formatFileSize(v.filesize)}` : ''}
+                                            </p>
                                         </div>
                                     </div>
-                                    <a href={v.fileUrl} download className="p-2 rounded-md hover:bg-slate-600 ml-2 flex-shrink-0">
-                                        <ArrowDownTrayIcon className="w-5 h-5 text-slate-400" />
-                                    </a>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <a
+                                            href={getDownloadUrl(v)}
+                                            download={v.fileName}
+                                            className="p-2 rounded-md hover:bg-slate-600"
+                                        >
+                                            <ArrowDownTrayIcon className="w-5 h-5 text-slate-400" />
+                                        </a>
+                                        {isEditing && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteVersion(v.id)}
+                                                className="p-2 rounded-md hover:bg-red-900/50 text-slate-400 hover:text-red-300 transition-colors"
+                                                aria-label="Удалить файл"
+                                            >
+                                                <TrashIcon className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </li>
                             ))}
                         </ul>
@@ -175,7 +300,7 @@ const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, 
                         <div className="text-center py-8 px-4 border-2 border-dashed border-slate-600 rounded-lg">
                             <DocumentDuplicateIcon className="mx-auto h-10 w-10 text-slate-400"/>
                             <p className="mt-2 text-sm font-medium text-slate-300">Файлы не загружены</p>
-                            <p className="text-xs text-slate-400">Загрузите первую версию документа.</p>
+                            <p className="text-xs text-slate-400">Загрузите первый файл документа.</p>
                         </div>
                     )}
                 </div>

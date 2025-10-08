@@ -21,6 +21,7 @@ export interface BaseColumn {
     id: string;
     name: string;
     type: ColumnType;
+    sort?: number;
 }
 
 export interface OwnerColumn extends BaseColumn {
@@ -45,7 +46,8 @@ export interface DocumentVersion {
     version: number;
     fileName: string;
     uploadDate: string;
-    fileUrl: string;
+    fileId: string;
+    filesize?: number;
 }
 
 export interface DocumentData {
