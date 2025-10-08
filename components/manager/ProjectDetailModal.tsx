@@ -262,18 +262,39 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     {editableProject.attachments.length > 0 && (
                         <ul className="border border-slate-700 rounded-lg divide-y divide-slate-700 mb-4">
                            {editableProject.attachments.map(att => {
-                                const fileUrl = att.directus_files_id ? `${DIRECTUS_URL}/assets/${att.directus_files_id.id}?access_token=${DIRECTUS_TOKEN}` : '#';
-                                const finalUrl = att.url || fileUrl;
-                                const title = att.title || att.directus_files_id?.title || 'Без названия';
+                                const fileId = att.directus_files_id?.id;
+                                const fileUrl = fileId ? `${DIRECTUS_URL}/assets/${fileId}?access_token=${DIRECTUS_TOKEN}` : null;
+                                let finalUrl: string | null = null;
+                                if (att.url) {
+                                    finalUrl = /^https?:\/\//i.test(att.url) ? att.url : `https://${att.url}`;
+                                } else if (fileUrl) {
+                                    finalUrl = fileUrl;
+                                }
+                                const title = (att.title && att.title.trim())
+                                    || (att.directus_files_id?.title && att.directus_files_id.title.trim())
+                                    || (att as any).directus_files_id?.filename_download
+                                    || (att.url ? att.url.replace(/^https?:\/\/(www\.)?/i, '').split(/[?#]/)[0] : '')
+                                    || 'Файл';
+                                const content = (
+                                    <>
+                                        {att.url ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{title}</p>
+                                            {att.directus_files_id && <p className="text-xs text-slate-400 truncate">{att.directus_files_id.type}, {(att.directus_files_id.filesize / 1024).toFixed(2)} KB</p>}
+                                        </div>
+                                    </>
+                                );
                                 return (
                                     <li key={att.id} className="p-3 flex items-center justify-between hover:bg-slate-700/50">
-                                        <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0 group" title={title}>
-                                            {att.url ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{title}</p>
-                                                {att.directus_files_id && <p className="text-xs text-slate-400 truncate">{att.directus_files_id.type}, {(att.directus_files_id.filesize / 1024).toFixed(2)} KB</p>}
+                                        {finalUrl ? (
+                                            <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0 group" title={title}>
+                                                {content}
+                                            </a>
+                                        ) : (
+                                            <div className="flex items-center min-w-0 group" title={title}>
+                                                {content}
                                             </div>
-                                        </a>
+                                        )}
                                         <button onClick={() => handleRemoveAttachment(att.id)} className="ml-2 p-1.5 rounded-full hover:bg-red-900/50 text-slate-400 hover:text-red-400" title="Удалить вложение">
                                             <TrashIcon className="w-4 h-4" />
                                         </button>
