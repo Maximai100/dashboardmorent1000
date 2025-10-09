@@ -233,6 +233,7 @@ const App: React.FC = () => {
                         case 'owner':
                             return <OwnerModal 
                                 owner={owner} 
+                                columns={columns}
                                 onClose={() => setModalData(null)}
                                 onUpdate={handleUpdateOwner}
                                 onDelete={handleDeleteOwner}
