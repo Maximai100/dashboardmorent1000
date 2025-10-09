@@ -1,5 +1,5 @@
 import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../config';
-import type { Project } from '../types/manager';
+import type { Project, ProjectAttachment } from '../types/manager';
 import type { Owner } from '../types';
 import { ColumnType, AttributeType } from '../types';
 

@@ -221,7 +221,9 @@ const App: React.FC = () => {
     const renderModal = () => {
         if (!modalData) return null;
 
-        const owner = owners.find(o => o.id === (modalData as any).ownerId || o.id === (modalData as any).id);
+        // For owner modal, use id directly; for document/attribute modals, use ownerId
+        const ownerId = modalData.type === 'owner' ? modalData.id : (modalData as any).ownerId;
+        const owner = owners.find(o => o.id === ownerId);
         if (!owner) return null;
 
         return (
@@ -236,6 +238,7 @@ const App: React.FC = () => {
                                 onDelete={handleDeleteOwner}
                             />;
                         case 'document': {
+                            if (modalData.type !== 'document') return null;
                             const docColumn = columns.find(c => c.id === modalData.columnId);
                             if (docColumn && docColumn.type === ColumnType.DOCUMENT) {
                                 const existingDocumentData = owner.data[modalData.columnId] as DocumentData | undefined;
@@ -254,6 +257,7 @@ const App: React.FC = () => {
                             return null;
                         }
                         case 'attribute': {
+                            if (modalData.type !== 'attribute') return null;
                             const attrColumn = columns.find(c => c.id === modalData.columnId);
                              if (attrColumn && attrColumn.type === ColumnType.ATTRIBUTE) {
                                 const attributeData = owner.data[modalData.columnId] as AttributeData;

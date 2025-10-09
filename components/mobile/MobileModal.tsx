@@ -4,29 +4,24 @@ import { useIsMobile } from '../../hooks/useMediaQuery';
 import { useDrag } from '@use-gesture/react';
 
 interface MobileModalProps {
-  isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
 
-const MobileModal: React.FC<MobileModalProps> = ({ isOpen, onClose, title, children, footer }) => {
+const MobileModal: React.FC<MobileModalProps> = ({ onClose, title, children, footer }) => {
   const isMobile = useIsMobile();
   const modalRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = 'hidden';
 
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, []);
 
   // Swipe down to close on mobile
   const bind = useDrag(
@@ -51,8 +46,6 @@ const MobileModal: React.FC<MobileModalProps> = ({ isOpen, onClose, title, child
       filterTaps: true,
     }
   );
-
-  if (!isOpen) return null;
 
   if (!isMobile) {
     // Desktop modal (centered dialog)
