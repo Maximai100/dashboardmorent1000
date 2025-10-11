@@ -16,7 +16,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, userRole 
     }] : []),
     {
       id: 'projects' as const,
-      label: 'Проекты',
+      label: 'Задачи',
       icon: ChartBarIcon
     }
   ];

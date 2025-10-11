@@ -33,7 +33,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 </div>
                 <input
                     type="text"
-                    placeholder="Поиск по проекту или ответственному..."
+                    placeholder="Поиск по задаче или ответственному..."
                     value={searchText}
                     onChange={(e) => onSearchTextChange(e.target.value)}
                     className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5"

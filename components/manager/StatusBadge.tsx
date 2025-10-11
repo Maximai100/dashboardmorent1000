@@ -2,7 +2,7 @@ import React from 'react';
 import { ProjectStatus } from '../../types/manager';
 
 interface StatusBadgeProps {
-    status: ProjectStatus;
+    status?: ProjectStatus | null;
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
@@ -19,9 +19,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
         }
     };
 
+    const label = status ?? '—';
+
     return (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClasses()}`}>
-            {status}
+            {label}
         </span>
     );
 };

@@ -113,12 +113,15 @@ export const useOwnersData = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [ownersResponse, columnsResponse] = await Promise.all([
+            const [ownersSettled, columnsSettled] = await Promise.allSettled([
                 directusService.getOwners(),
                 directusService.getColumns(),
             ]);
 
-            const mappedColumns = columnsResponse.map(mapDirectusColumnToColumn);
+            const ownersResponse = ownersSettled.status === 'fulfilled' ? ownersSettled.value : [];
+            const columnsResponse = columnsSettled.status === 'fulfilled' ? columnsSettled.value : [];
+
+            const mappedColumns = (columnsResponse as any[]).map(mapDirectusColumnToColumn);
             const existingIds = new Set(mappedColumns.map(column => column.id));
             const systemColumns = SYSTEM_COLUMNS.filter(column => !existingIds.has(column.id)).map(column => ({
                 ...column,
@@ -160,7 +163,13 @@ export const useOwnersData = () => {
                 setOwners(ownersWithDefaults);
             }
 
-            setError(null);
+            // If owners loaded but columns failed, don't treat as fatal
+            if (ownersSettled.status === 'fulfilled' && columnsSettled.status === 'rejected') {
+                console.warn('Columns endpoint unavailable; showing system columns only.');
+                setError(null);
+            } else {
+                setError(null);
+            }
         } catch (err: any) {
             setError(err.message || 'Не удалось загрузить данные Directus');
         } finally {

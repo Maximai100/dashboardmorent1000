@@ -23,13 +23,14 @@ interface ProjectTableProps {
 const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onRowClick, sortConfig, onSort, draggedProjectId, onDragStart, onDrop }) => {
     
     const headers: { key: SortableKey | string; label: string; isSortable: boolean }[] = [
-        { key: 'name', label: 'ДЕЛО / ПРОЕКТ', isSortable: true },
+        { key: 'name', label: 'ДЕЛО / ЗАДАЧА', isSortable: true },
         { key: 'responsible', label: 'ОТВЕТСТВЕННЫЙ', isSortable: true },
         { key: 'deadline', label: 'ДЕДЛАЙН', isSortable: true },
         { key: 'status', label: 'СТАТУС', isSortable: true },
         { key: 'tags', label: 'ТЕГИ', isSortable: false },
         { key: 'attachments', label: 'ТАБЛИЦА', isSortable: false },
         { key: 'notes', label: 'ПРИМЕЧАНИЯ', isSortable: false },
+        { key: 'director_comment', label: 'КОММЕНТАРИЙ РУКОВОДИТЕЛЯ', isSortable: false },
     ];
 
     const SortIndicator = ({ columnKey }: { columnKey: SortableKey }) => {
@@ -43,8 +44,8 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onRowClick, sortC
         return (
             <div className="text-center py-16 bg-slate-800 rounded-lg shadow-md">
                 <TableCellsIcon className="mx-auto h-12 w-12 text-slate-500" />
-                <h3 className="mt-2 text-lg font-medium text-white">Проекты не найдены</h3>
-                <p className="mt-1 text-sm text-slate-400">Попробуйте изменить фильтры или добавить новый проект.</p>
+                <h3 className="mt-2 text-lg font-medium text-white">Задачи не найдены</h3>
+                <p className="mt-1 text-sm text-slate-400">Попробуйте изменить фильтры или добавить новую задачу.</p>
             </div>
         );
     }

@@ -6,7 +6,7 @@ import Header from './Header';
 import FilterBar from './FilterBar';
 import ProjectTable from './ProjectTable';
 import type { SortConfig, SortableKey } from './ProjectTable';
-import ProjectDetailModal from './ProjectDetailModal';
+import ProjectDetailModal, { ProjectUpdatePayload } from './ProjectDetailModal';
 import { SpinnerIcon } from '../icons/Icons';
 
 export type AttachmentFilter = 'all' | 'file' | 'link' | 'none';
@@ -113,12 +113,15 @@ const ManagerDashboard: React.FC = () => {
 
     const handleNewProject = async () => {
         const newProjectData: Omit<Project, 'id'> = {
-            name: 'Новый проект',
+            name: 'Новая задача',
             responsible: 'Не назначен',
             deadline: new Date().toISOString(),
             attachments: [],
             notes: '',
-            // Don't include JSON fields (history, tags, status) for new projects - they will be added by Directus
+            director_comment: '',
+            tags: [],
+            history: [],
+            // History/tags/status are initialized locally; Directus will persist them as needed.
         };
         const createdProject = await addProject(newProjectData);
         if (createdProject) {
@@ -126,9 +129,9 @@ const ManagerDashboard: React.FC = () => {
         }
     };
 
-    const handleSaveProject = async (updatedProject: Project) => {
+    const handleSaveProject = async (updatedProject: ProjectUpdatePayload) => {
         const { id, ...dataToUpdate } = updatedProject;
-        await updateProject(id, dataToUpdate);
+        await updateProject(id, dataToUpdate as any);
         setSelectedProject(null);
     };
     
@@ -164,7 +167,7 @@ const ManagerDashboard: React.FC = () => {
             return (
                 <div className="flex justify-center items-center h-64">
                     <SpinnerIcon className="w-8 h-8 animate-spin text-blue-500" />
-                    <p className="ml-4 text-slate-400">Загрузка проектов...</p>
+                    <p className="ml-4 text-slate-400">Загрузка задач...</p>
                 </div>
             );
         }
@@ -172,7 +175,7 @@ const ManagerDashboard: React.FC = () => {
         if (error) {
             return (
                 <div className="text-center py-16 bg-red-900/20 border border-red-500/30 rounded-lg">
-                    <h3 className="text-lg font-medium text-red-400">Ошибка при загрузке проектов</h3>
+                    <h3 className="text-lg font-medium text-red-400">Ошибка при загрузке задач</h3>
                     <p className="mt-1 text-sm text-slate-400">{error}</p>
                     <p className="mt-2 text-xs text-slate-500">Убедитесь, что Directus запущен и конфигурация в `config.ts` верна.</p>
                 </div>

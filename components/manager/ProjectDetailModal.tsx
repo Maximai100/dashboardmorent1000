@@ -6,15 +6,103 @@ import { TrashIcon, XMarkIcon, PlusIcon, FileIcon, LinkIcon, ClockIcon, ArrowUpT
 import * as directusService from '../../services/directus';
 import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../../config';
 
+type AttachmentPayload = {
+    id?: number;
+    url?: string | null;
+    title?: string | null;
+    directus_files_id?: string | null;
+    projects_id?: string | number | null;
+    _delete?: boolean; // Флаг для удаления attachment в Directus
+};
+
+export type ProjectUpdatePayload = {
+    id: string;
+    name: string;
+    responsible: string;
+    deadline: string;
+    notes: string;
+    director_comment: string;
+    attachments: AttachmentPayload[];
+    tags?: string[];
+    status?: string | null;
+};
+
 interface ProjectDetailModalProps {
     project: Project;
     onClose: () => void;
-    onSave: (updatedProject: Project) => void;
+    onSave: (updatedProject: ProjectUpdatePayload) => void;
     onDelete: (projectId: string) => void;
 }
 
+const parseStatus = (status: Project['status']): ProjectStatus | null => {
+    if (status === null || status === undefined) {
+        return null;
+    }
+
+    if (typeof status === 'string') {
+        try {
+            const parsed = JSON.parse(status);
+            if (typeof parsed === 'string') {
+                return parsed as ProjectStatus;
+            }
+        } catch {
+            if (Object.values(ProjectStatus).includes(status as ProjectStatus)) {
+                return status as ProjectStatus;
+            }
+        }
+        return null;
+    }
+
+    return status;
+};
+
+const normalizeAttachments = (
+    attachments: ProjectAttachment[] | (number | string)[] | undefined | null,
+    projectId: string
+): ProjectAttachment[] => {
+    if (!attachments) return [];
+
+    const projectIdNumber = Number(projectId);
+    const fallbackProjectId = Number.isNaN(projectIdNumber) ? projectId : projectIdNumber;
+
+    return attachments.map((att) => {
+        if (typeof att === 'number' || typeof att === 'string') {
+            const numericId = Number(att);
+            return {
+                id: Number.isNaN(numericId) ? -1 : numericId,
+                projects_id: fallbackProjectId,
+                url: undefined,
+            } as ProjectAttachment;
+        }
+
+        const url = att.url ?? (typeof att.URL === 'string' ? att.URL : undefined);
+        return {
+            ...att,
+            projects_id: att.projects_id ?? fallbackProjectId,
+            url,
+        };
+    });
+};
+
+const normalizeProject = (incoming: Project): Project => ({
+    ...incoming,
+    tags: incoming.tags ?? [],
+    attachments: normalizeAttachments(incoming.attachments, incoming.id),
+    history: incoming.history ?? [],
+    notes: incoming.notes ?? '',
+    director_comment: incoming.director_comment ?? '',
+    status: parseStatus(incoming.status ?? null),
+});
+
+const tagsEqual = (a: string[] = [], b: string[] = []) => {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((value, index) => value === sortedB[index]);
+};
+
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClose, onSave, onDelete }) => {
-    const [editableProject, setEditableProject] = useState<Project>(project);
+    const [editableProject, setEditableProject] = useState<Project>(() => normalizeProject(project));
     const [newTag, setNewTag] = useState('');
     const [isAddingLink, setIsAddingLink] = useState(false);
     const [newLink, setNewLink] = useState({ url: '', title: '' });
@@ -22,11 +110,20 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setEditableProject(project);
+        setEditableProject(normalizeProject(project));
     }, [project]);
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+
+        if (name === 'status') {
+            setEditableProject(prev => ({
+                ...prev,
+                status: value ? (value as ProjectStatus) : null,
+            }));
+            return;
+        }
+
         setEditableProject(prev => ({ ...prev, [name]: value }));
     };
 
@@ -62,10 +159,15 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     };
 
     const handleRemoveAttachment = (junctionIdToRemove: number) => {
-        setEditableProject(prev => ({
-            ...prev,
-            attachments: (prev.attachments || []).filter(att => att.id !== junctionIdToRemove),
-        }));
+        console.log(`🗑️ Удаление attachment из локального состояния:`, { id: junctionIdToRemove });
+        setEditableProject(prev => {
+            const newAttachments = (prev.attachments || []).filter(att => att.id !== junctionIdToRemove);
+            console.log(`   Было: ${prev.attachments?.length || 0}, стало: ${newAttachments.length}`);
+            return {
+                ...prev,
+                attachments: newAttachments,
+            };
+        });
     };
     
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,7 +179,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                 const newAttachment: ProjectAttachment = {
                     id: Date.now() * -1, // Negative temporary ID
                     projects_id: project.id,
-                    directus_files_id: uploadedFile
+                    directus_files_id: uploadedFile, // Сохраняем полный объект файла
+                    title: uploadedFile.title || file.name
                 };
                 setEditableProject(prev => ({ ...prev, attachments: [...(prev.attachments || []), newAttachment] }));
             } catch (error) {
@@ -112,29 +215,125 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     };
 
     const handleSaveChanges = () => {
-        // Filter out any invalid attachments to prevent creating "empty" relations.
-        const validAttachmentsToSave = (editableProject.attachments || []).filter(
-            att => att.directus_files_id || (att.url && att.url.trim() !== '')
-        );
+        const pendingTag = newTag.trim();
+        const currentTags = editableProject.tags ?? [];
+        const tagsIncludingPending = pendingTag && !currentTags.includes(pendingTag)
+            ? [...currentTags, pendingTag]
+            : currentTags;
 
-        const projectToSave = {
-            ...editableProject,
-            // The payload for an M2M relation is an array of objects.
-            // Each object represents a row in the junction table.
-            attachments: validAttachmentsToSave.map(att => ({
-                // If ID is negative (new), don't send it. Otherwise, send it for update.
-                id: att.id > 0 ? att.id : undefined,
-                url: att.url || null,
-                title: att.title || null,
-                // Send file ID as a string, not an object, if it exists.
-                directus_files_id: att.directus_files_id ? att.directus_files_id.id : null,
-            }))
+        if (pendingTag && !currentTags.includes(pendingTag)) {
+            setEditableProject(prev => ({
+                ...prev,
+                tags: tagsIncludingPending,
+            }));
+            setNewTag('');
+        }
+
+        // Разделяем attachments на существующие, новые и удаленные
+        const originalAttachmentIds = new Set((project.attachments || []).map(att => att.id));
+        const currentAttachmentIds = new Set((editableProject.attachments || []).map(att => att.id));
+        
+        console.log('🔍 Анализ attachments:', {
+            original: Array.from(originalAttachmentIds),
+            current: Array.from(currentAttachmentIds),
+            deleted: Array.from(originalAttachmentIds).filter(id => !currentAttachmentIds.has(id))
+        });
+        
+        const attachmentsPayload: any[] = [];
+        
+        // Отправляем только текущие attachments (существующие + новые)
+        // Directus автоматически удалит те, которых нет в списке
+        
+        // 1. Сохраняем существующие attachments (с положительным ID)
+        (editableProject.attachments || []).forEach(att => {
+            if (att.id > 0) {
+                // Существующий attachment - отправляем только ID для сохранения
+                attachmentsPayload.push({ id: att.id });
+                console.log(`📎 Сохраняем существующий attachment:`, { id: att.id });
+            }
+        });
+        
+        // 2. Добавляем новые attachments (с отрицательным ID)
+        (editableProject.attachments || []).forEach(att => {
+            if (att.id < 0) {
+                // Пропускаем невалидные attachments
+                if (!att.directus_files_id && (!att.url || att.url.trim() === '')) {
+                    return;
+                }
+
+                const payload: any = {
+                    projects_id: project.id
+                };
+
+                // Для ссылок - Directus ожидает URL (uppercase) и title (lowercase)
+                if (att.url && att.url.trim() !== '') {
+                    payload.URL = att.url.trim();  // Directus использует URL (uppercase)
+                    if (att.title && att.title.trim() !== '') {
+                        payload.title = att.title.trim();  // Directus использует title (lowercase)
+                    }
+                    console.log(`🔗 Сохранение ссылки:`, { URL: payload.URL, title: payload.title });
+                }
+
+                // Для файлов
+                if (att.directus_files_id) {
+                    const fileId = typeof att.directus_files_id === 'string' 
+                        ? att.directus_files_id 
+                        : att.directus_files_id.id;
+                    payload.directus_files_id = fileId;
+                    
+                    if (att.title) {
+                        payload.title = att.title;
+                    }
+                }
+
+                console.log(`📎 Добавляем новый attachment:`, payload);
+                attachmentsPayload.push(payload);
+            }
+        });
+        
+        // Directus автоматически удалит attachments, которых нет в списке
+        const deletedIds = Array.from(originalAttachmentIds).filter(id => !currentAttachmentIds.has(id) && id > 0);
+        if (deletedIds.length > 0) {
+            console.log(`📎 Будут удалены attachments (не включены в список):`, deletedIds);
+        }
+
+        const originalTags = project.tags ?? [];
+        const newTags = tagsIncludingPending;
+        const tagsChanged = !tagsEqual(originalTags, newTags);
+
+        const originalStatus = project.status ?? null;
+        const newStatus = editableProject.status ?? null;
+        const statusChanged = originalStatus !== newStatus;
+
+        const projectToSave: ProjectUpdatePayload = {
+            id: project.id,
+            name: editableProject.name,
+            responsible: editableProject.responsible,
+            deadline: editableProject.deadline,
+            notes: editableProject.notes ?? '',
+            director_comment: editableProject.director_comment ?? '',
+            attachments: attachmentsPayload,
         };
-        onSave(projectToSave as any);
+
+        if (tagsChanged) {
+            projectToSave.tags = newTags;
+        }
+
+        if (statusChanged) {
+            projectToSave.status = newStatus ? JSON.stringify(newStatus) : null;
+        }
+
+        console.log('💾 Сохранение задачи:', {
+            projectId: project.id,
+            attachmentsCount: attachmentsPayload.length,
+            attachments: attachmentsPayload
+        });
+
+        onSave(projectToSave);
     };
     
     const handleDeleteProject = () => {
-      if (window.confirm(`Вы уверены, что хотите удалить проект "${project.name}"?`)) {
+      if (window.confirm(`Вы уверены, что хотите удалить задачу "${project.name}"?`)) {
         onDelete(project.id);
       }
     }
@@ -149,7 +348,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                 className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors"
             >
                 <TrashIcon className="w-4 h-4" />
-                Удалить проект
+                Удалить задачу
             </button>
             <div className="flex space-x-2">
                 <button type="button" onClick={onClose} className="text-white bg-slate-600 hover:bg-slate-700 border border-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-500 font-medium rounded-lg text-sm px-5 py-2.5">
@@ -163,15 +362,27 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
     );
 
     // Filter out any invalid attachments that are neither a file nor a link for display
-    const validAttachments = (editableProject.attachments || []).filter(att => att.directus_files_id || att.url);
+    const validAttachments = (editableProject.attachments || []).filter(att => att.directus_files_id || att.url || att.URL);
+    
+    console.log(`🖼️ Отображение attachments для задачи "${project.name}":`, {
+        total: editableProject.attachments?.length || 0,
+        valid: validAttachments.length,
+        attachments: validAttachments.map(att => ({
+            id: att.id,
+            hasFile: !!att.directus_files_id,
+            fileType: typeof att.directus_files_id,
+            hasUrl: !!att.url,
+            title: att.title
+        }))
+    });
 
     return (
-        <Modal title="Детали проекта" onClose={onClose} footer={footer}>
+        <Modal title="Детали задачи" onClose={onClose} footer={footer}>
             <div className="space-y-6">
                 {/* Main details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-white">Название проекта</label>
+                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-white">Название задачи</label>
                         <input type="text" id="name" name="name" value={editableProject.name} onChange={handleInputChange} className={inputClasses} />
                     </div>
                      <div>
@@ -184,7 +395,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     </div>
                      <div>
                         <label htmlFor="status" className="block mb-2 text-sm font-medium text-white">Статус</label>
-                        <select id="status" name="status" value={editableProject.status} onChange={handleInputChange} className={inputClasses}>
+                        <select id="status" name="status" value={editableProject.status ?? ''} onChange={handleInputChange} className={inputClasses}>
+                            <option value="">Без статуса</option>
                             {Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
@@ -218,6 +430,20 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     <label htmlFor="notes" className="block mb-2 text-sm font-medium text-white">Заметки</label>
                     <textarea id="notes" name="notes" rows={4} value={editableProject.notes} onChange={handleInputChange} className={inputClasses}></textarea>
                 </div>
+
+                {/* Director Comment */}
+                <div>
+                    <label htmlFor="director_comment" className="block mb-2 text-sm font-medium text-white">Комментарий руководителя</label>
+                    <textarea
+                        id="director_comment"
+                        name="director_comment"
+                        rows={3}
+                        value={editableProject.director_comment}
+                        onChange={handleInputChange}
+                        className={inputClasses}
+                        placeholder="Добавьте комментарий для команды..."
+                    ></textarea>
+                </div>
                 
                 {/* Attachments */}
                  <div>
@@ -225,17 +451,26 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                     {validAttachments.length > 0 && (
                         <ul className="border border-slate-700 rounded-lg divide-y divide-slate-700 mb-4">
                            {validAttachments.map(att => {
-                                const isLink = !!att.url;
+                                // Directus возвращает URL (uppercase) и title (lowercase)
+                                const linkUrl = att.URL || att.url;
+                                const isLink = !!linkUrl;
                                 const isFile = !!att.directus_files_id;
                                 
-                                const fileUrl = isFile ? `${DIRECTUS_URL}/assets/${att.directus_files_id.id}?access_token=${DIRECTUS_TOKEN}` : '#';
-                                const finalUrl = att.url || fileUrl;
+                                // directus_files_id может быть строкой (ID) или объектом
+                                const fileId = typeof att.directus_files_id === 'string' 
+                                    ? att.directus_files_id 
+                                    : att.directus_files_id?.id;
                                 
-                                const title = att.title || (isFile ? att.directus_files_id.title : '') || 'Без названия';
+                                const fileUrl = isFile && fileId ? `${DIRECTUS_URL}/assets/${fileId}?access_token=${DIRECTUS_TOKEN}` : '#';
+                                const finalUrl = linkUrl || fileUrl;
                                 
-                                const subtitle = isFile
-                                    ? `${att.directus_files_id.type}, ${(att.directus_files_id.filesize / 1024).toFixed(2)} KB`
-                                    : att.url;
+                                const fileObj = typeof att.directus_files_id === 'object' ? att.directus_files_id : null;
+                                // Для всех используем title (lowercase) - это стандартное поле Directus
+                                const displayTitle = att.title || (fileObj?.title) || 'Файл';
+                                
+                                const subtitle = isFile && fileObj
+                                    ? `${fileObj.type || 'файл'}, ${((fileObj.filesize || 0) / 1024).toFixed(2)} KB`
+                                    : linkUrl;
 
                                 return (
                                     <li key={att.id} className="p-3 flex items-center justify-between hover:bg-slate-700/50">
@@ -244,11 +479,11 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center min-w-0 flex-grow group"
-                                            title={title}
+                                            title={displayTitle}
                                         >
                                             {isLink ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
                                             <div className="min-w-0">
-                                                <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{title}</p>
+                                                <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">{displayTitle}</p>
                                                 <p className="text-xs text-slate-400 truncate">{subtitle}</p>
                                             </div>
                                         </a>

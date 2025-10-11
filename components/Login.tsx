@@ -40,7 +40,7 @@ const Login: React.FC = () => {
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 className={inputClasses}
-                                placeholder="director"
+                                placeholder="manager"
                                 required
                                 disabled={isLoading}
                             />

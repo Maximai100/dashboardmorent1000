@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import type { Project } from '../../types/manager';
+import { ProjectStatus } from '../../types/manager';
 import { StatusBadge } from './StatusBadge';
 import { FileIcon, LinkIcon } from '../icons/Icons';
 import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../../config';
@@ -15,7 +16,9 @@ interface ProjectRowProps {
 
 export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isDragged, onDragStart, onDrop }) => {
     const [isDragOver, setIsDragOver] = useState(false);
-    const isOverdue = new Date(project.deadline) < new Date() && project.status !== 'завершено' && project.status !== 'архив';
+    const isCompleted = project.status === ProjectStatus.Completed;
+    const isArchived = project.status === ProjectStatus.Archived;
+    const isOverdue = new Date(project.deadline) < new Date() && !isCompleted && !isArchived;
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -90,16 +93,24 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
                 ) : (
                     <div className="flex items-center space-x-2">
                         {(project.attachments || []).map(att => {
-                            if (att.url) {
+                            // Directus возвращает URL (uppercase) и title (lowercase)
+                            const linkUrl = att.URL || att.url;
+                            const linkTitle = att.title; // title всегда lowercase
+                            
+                            if (linkUrl) {
                                 return (
-                                    <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" title={att.title || att.url} onClick={(e) => e.stopPropagation()}>
+                                    <a key={att.id} href={linkUrl} target="_blank" rel="noopener noreferrer" title={linkTitle || linkUrl} onClick={(e) => e.stopPropagation()}>
                                         <LinkIcon className="w-5 h-5 text-slate-400 hover:text-blue-400" />
                                     </a>
                                 );
                             } else if (att.directus_files_id) {
-                                const fileUrl = `${DIRECTUS_URL}/assets/${att.directus_files_id.id}?access_token=${DIRECTUS_TOKEN}`;
+                                const fileData = typeof att.directus_files_id === 'object' ? att.directus_files_id : null;
+                                const fileId = typeof att.directus_files_id === 'string' ? att.directus_files_id : fileData?.id;
+                                const fileUrl = fileId ? `${DIRECTUS_URL}/assets/${fileId}?access_token=${DIRECTUS_TOKEN}` : '#';
+                                const fileTitle = fileData?.title || 'Файл'; // title всегда lowercase
+                                
                                 return (
-                                    <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer" title={att.directus_files_id.title} onClick={(e) => e.stopPropagation()}>
+                                    <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer" title={fileTitle} onClick={(e) => e.stopPropagation()}>
                                         <FileIcon className="w-5 h-5 text-slate-400 hover:text-blue-400" />
                                     </a>
                                 );
@@ -111,6 +122,9 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
             </td>
             <td className="px-6 py-4 text-sm text-slate-400 max-w-sm truncate cursor-pointer" onClick={() => onRowClick(project)}>
                 {project.notes || '—'}
+            </td>
+            <td className="px-6 py-4 text-sm text-slate-300 max-w-xs truncate cursor-pointer" onClick={() => onRowClick(project)}>
+                {project.director_comment ? project.director_comment : '—'}
             </td>
         </tr>
     );

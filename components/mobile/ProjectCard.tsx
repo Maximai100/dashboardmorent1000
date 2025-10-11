@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Project } from '../../types/manager';
+import { ProjectStatus } from '../../types/manager';
 import { StatusBadge } from '../manager/StatusBadge';
 import { FileIcon, LinkIcon } from '../icons/Icons';
 
@@ -9,9 +10,9 @@ interface ProjectCardProps {
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onTap }) => {
-  const isOverdue = new Date(project.deadline) < new Date() && 
-                    project.status !== 'завершено' && 
-                    project.status !== 'архив';
+  const isCompleted = project.status === ProjectStatus.Completed;
+  const isArchived = project.status === ProjectStatus.Archived;
+  const isOverdue = new Date(project.deadline) < new Date() && !isCompleted && !isArchived;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
