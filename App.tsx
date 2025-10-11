@@ -404,7 +404,7 @@ const App: React.FC = () => {
 
                 {/* Mobile Header */}
                 {isMobile && (
-                    <div className="mb-4 flex justify-between items-center pt-2">
+                    <div className="mb-4 flex justify-between items-center" style={{ paddingTop: 'calc(var(--safe-area-inset-top) + 8px)' }}>
                         <h1 className="sr-only">
                             {activeTab === 'owners' ? 'Собственники' : 'Задачи'}
                         </h1>
