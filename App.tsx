@@ -317,7 +317,6 @@ const App: React.FC = () => {
                     <FloatingActions
                         onAddOwner={() => setIsAddOwnerModalOpen(true)}
                         onAddColumn={() => setIsAddColumnModalOpen(true)}
-                        onLogout={logout}
                         disabled={isAddOwnerModalOpen || isAddColumnModalOpen || loading}
                     />
                 )}
@@ -404,18 +403,10 @@ const App: React.FC = () => {
 
                 {/* Mobile Header */}
                 {isMobile && (
-                    <div className="mb-4 flex justify-between items-center" style={{ paddingTop: 'calc(var(--safe-area-inset-top) + 8px)' }}>
+                    <div className="mb-4" style={{ paddingTop: 'calc(var(--safe-area-inset-top) + 8px)' }}>
                         <h1 className="sr-only">
                             {activeTab === 'owners' ? 'Собственники' : 'Задачи'}
                         </h1>
-                        <button
-                            onClick={logout}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 border border-slate-600 active:bg-slate-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 transition-colors"
-                            aria-label="Выйти"
-                        >
-                            <span className="w-2 h-2 rounded-full bg-red-400" />
-                            <span>Выйти</span>
-                        </button>
                     </div>
                 )}
 
