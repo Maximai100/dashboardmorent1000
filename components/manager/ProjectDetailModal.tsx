@@ -4,7 +4,7 @@ import { ProjectStatus } from '../../types/manager';
 import Modal from '../Modal';
 import { TrashIcon, XMarkIcon, PlusIcon, FileIcon, LinkIcon, ClockIcon, ArrowUpTrayIcon, SpinnerIcon } from '../icons/Icons';
 import * as directusService from '../../services/directus';
-import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../../config';
+import { isWebViewable, buildDirectusAssetUrl } from '../../utils/fileHelpers';
 
 type AttachmentPayload = {
     id?: number;
@@ -461,12 +461,13 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                                     ? att.directus_files_id 
                                     : att.directus_files_id?.id;
                                 
-                                const fileUrl = isFile && fileId ? `${DIRECTUS_URL}/assets/${fileId}?access_token=${DIRECTUS_TOKEN}` : '#';
-                                const finalUrl = linkUrl || fileUrl;
-                                
                                 const fileObj = typeof att.directus_files_id === 'object' ? att.directus_files_id : null;
                                 // Для всех используем title (lowercase) - это стандартное поле Directus
                                 const displayTitle = att.title || (fileObj?.title) || 'Файл';
+                                const fileName = fileObj?.filename_download || fileObj?.title || displayTitle;
+                                const isViewableFile = isFile ? isWebViewable(fileName) : false;
+                                const fileUrl = isFile && fileId ? buildDirectusAssetUrl(fileId, { forceDownload: !isViewableFile }) : '#';
+                                const finalUrl = linkUrl || fileUrl;
                                 
                                 const subtitle = isFile && fileObj
                                     ? `${fileObj.type || 'файл'}, ${((fileObj.filesize || 0) / 1024).toFixed(2)} KB`
@@ -480,6 +481,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                                             rel="noopener noreferrer"
                                             className="flex items-center min-w-0 flex-grow group"
                                             title={displayTitle}
+                                            download={!linkUrl && isFile && !isViewableFile ? (fileName || undefined) : undefined}
                                         >
                                             {isLink ? <LinkIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" /> : <FileIcon className="w-5 h-5 mr-3 text-slate-400 flex-shrink-0" />}
                                             <div className="min-w-0">

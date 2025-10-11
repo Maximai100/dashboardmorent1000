@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { DocumentData, DocumentStatus, DocumentVersion } from '../types';
 import Modal from './Modal';
 import { DocumentDuplicateIcon, ArrowDownTrayIcon, ClockIcon, PaperClipIcon, PencilIcon, PlusIcon, XMarkIcon, SpinnerIcon, TrashIcon } from './icons/Icons';
-import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../config';
 import * as directusService from '../services/directus';
+import { isWebViewable, buildDirectusAssetUrl } from '../utils/fileHelpers';
 
 interface DocumentModalProps {
     ownerName: string;
@@ -15,20 +15,6 @@ interface DocumentModalProps {
 }
 
 const documentStatuses: DocumentStatus[] = ['Есть', 'Нет', 'Истек', 'Скоро истекает'];
-
-const getAssetsBaseUrl = () => (DIRECTUS_URL.endsWith('/') ? DIRECTUS_URL.slice(0, -1) : DIRECTUS_URL);
-
-const getDownloadUrl = (version: DocumentVersion & { fileUrl?: string }) => {
-    const effectiveFileId = version.fileId || version.id;
-    if (effectiveFileId) {
-        const tokenSuffix = DIRECTUS_TOKEN ? `?access_token=${DIRECTUS_TOKEN}` : '';
-        return `${getAssetsBaseUrl()}/assets/${effectiveFileId}${tokenSuffix}`;
-    }
-    if (version.fileUrl) {
-        return version.fileUrl;
-    }
-    return '#';
-};
 
 const formatFileSize = (bytes?: number) => {
     if (typeof bytes !== 'number' || !Number.isFinite(bytes)) {
@@ -275,13 +261,21 @@ const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, 
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
-                                        <a
-                                            href={getDownloadUrl(v)}
-                                            download={v.fileName}
-                                            className="p-2 rounded-md hover:bg-slate-600"
-                                        >
-                                            <ArrowDownTrayIcon className="w-5 h-5 text-slate-400" />
-                                        </a>
+                                        {(() => {
+                                            const isViewable = isWebViewable(v.fileName);
+                                            const href = buildDirectusAssetUrl(v.fileId || v.id, { forceDownload: !isViewable });
+                                            return (
+                                                <a
+                                                    href={href}
+                                                    download={!isViewable ? v.fileName : undefined}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-2 rounded-md hover:bg-slate-600"
+                                                >
+                                                    <ArrowDownTrayIcon className="w-5 h-5 text-slate-400" />
+                                                </a>
+                                            );
+                                        })()}
                                         {isEditing && (
                                             <button
                                                 type="button"

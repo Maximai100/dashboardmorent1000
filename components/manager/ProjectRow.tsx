@@ -4,7 +4,7 @@ import type { Project } from '../../types/manager';
 import { ProjectStatus } from '../../types/manager';
 import { StatusBadge } from './StatusBadge';
 import { FileIcon, LinkIcon } from '../icons/Icons';
-import { DIRECTUS_URL, DIRECTUS_TOKEN } from '../../config';
+import { isWebViewable, buildDirectusAssetUrl } from '../../utils/fileHelpers';
 
 interface ProjectRowProps {
     project: Project;
@@ -106,11 +106,21 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
                             } else if (att.directus_files_id) {
                                 const fileData = typeof att.directus_files_id === 'object' ? att.directus_files_id : null;
                                 const fileId = typeof att.directus_files_id === 'string' ? att.directus_files_id : fileData?.id;
-                                const fileUrl = fileId ? `${DIRECTUS_URL}/assets/${fileId}?access_token=${DIRECTUS_TOKEN}` : '#';
-                                const fileTitle = fileData?.title || 'Файл'; // title всегда lowercase
-                                
+                                const fileTitle = fileData?.title || 'Файл';
+                                const fileName = fileData?.filename_download || fileTitle;
+                                const isViewable = isWebViewable(fileName);
+                                const fileUrl = fileId ? buildDirectusAssetUrl(fileId, { forceDownload: !isViewable }) : '#';
+
                                 return (
-                                    <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer" title={fileTitle} onClick={(e) => e.stopPropagation()}>
+                                    <a
+                                        key={att.id}
+                                        href={fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={fileTitle}
+                                        onClick={(e) => e.stopPropagation()}
+                                        download={!isViewable ? (fileName || undefined) : undefined}
+                                    >
                                         <FileIcon className="w-5 h-5 text-slate-400 hover:text-blue-400" />
                                     </a>
                                 );
