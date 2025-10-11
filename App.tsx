@@ -4,10 +4,9 @@ import { useOwnersData } from './hooks/useOwnersData';
 import type { Owner, Column, ModalData, DocumentData, AttributeData, AttributeColumn } from './types';
 import { ColumnType } from './types';
 import ResponsiveDashboard from './components/ResponsiveDashboard';
-import { UserPlusIcon, BuildingOfficeIcon, ChartBarIcon, SpinnerIcon, LogOutIcon, UserIcon } from './components/icons/Icons';
+import { UserPlusIcon, BuildingOfficeIcon, ChartBarIcon, SpinnerIcon, LogOutIcon } from './components/icons/Icons';
 import { useAuth } from './context/AuthContext';
 import BottomNav from './components/mobile/BottomNav';
-import ProfileMenu from './components/mobile/ProfileMenu';
 import OfflineIndicator from './components/OfflineIndicator';
 import { useIsMobile } from './hooks/useMediaQuery';
 import { syncManager } from './services/syncManager';
@@ -49,7 +48,6 @@ const App: React.FC = () => {
     const [isAddOwnerModalOpen, setIsAddOwnerModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('projects');
     const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'asc' | 'desc' }>({ key: 'owner', direction: 'asc' });
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const isMobile = useIsMobile();
 
     useEffect(() => {
@@ -408,13 +406,6 @@ const App: React.FC = () => {
                         <h1 className="sr-only">
                             {activeTab === 'owners' ? 'Собственники' : 'Задачи'}
                         </h1>
-                        <button 
-                            onClick={() => setIsProfileMenuOpen(true)} 
-                            className="p-2 rounded-lg text-slate-400 active:bg-slate-700 active:text-white transition-colors touch-target"
-                            aria-label="Профиль"
-                        >
-                            <UserIcon className="w-6 h-6"/>
-                        </button>
                     </div>
                 )}
 
@@ -435,16 +426,6 @@ const App: React.FC = () => {
                 />
             )}
 
-            {/* Mobile Profile Menu */}
-            {isMobile && user && (
-                <ProfileMenu
-                    isOpen={isProfileMenuOpen}
-                    onClose={() => setIsProfileMenuOpen(false)}
-                    username={user.username}
-                    role={user.role}
-                    onLogout={logout}
-                />
-            )}
         </div>
     );
 };
