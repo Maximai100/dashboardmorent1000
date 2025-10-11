@@ -82,17 +82,11 @@ const MobileModal: React.FC<MobileModalProps> = ({ onClose, title, children, foo
 
   // Mobile modal (full-screen)
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-900"
-      style={{
-        paddingTop: 'calc(var(--safe-area-inset-top) + 12px)',
-        paddingBottom: 'var(--safe-area-inset-bottom)',
-      }}
-    >
+    <div className="fixed inset-0 z-50 bg-slate-900">
       <div ref={modalRef} className="h-full flex flex-col bg-slate-900">
         {/* Header with swipe handle */}
-        <div {...bind()} className="flex-shrink-0">
-          <div className="flex justify-center pt-2 pb-1">
+        <div {...bind()} className="flex-shrink-0" style={{ paddingTop: 'calc(var(--safe-area-inset-top) + 6px)' }}>
+          <div className="flex justify-center pt-1 pb-2">
             <div className="w-12 h-1 bg-slate-600 rounded-full" />
           </div>
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
@@ -113,8 +107,10 @@ const MobileModal: React.FC<MobileModalProps> = ({ onClose, title, children, foo
 
         {/* Footer */}
         {footer && (
-          <div className="flex-shrink-0 px-4 py-4 border-t border-slate-700 safe-area-bottom">
-            {footer}
+          <div className="flex-shrink-0 px-4 py-3 border-t border-slate-700" style={{ paddingBottom: 'var(--safe-area-inset-bottom)' }}>
+            <div className="flex justify-between items-center gap-2">
+              {footer}
+            </div>
           </div>
         )}
       </div>
