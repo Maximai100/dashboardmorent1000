@@ -85,11 +85,11 @@ const MobileModal: React.FC<MobileModalProps> = ({ onClose, title, children, foo
     <div className="fixed inset-0 z-50 bg-slate-900">
       <div ref={modalRef} className="h-full flex flex-col bg-slate-900">
         {/* Header with swipe handle */}
-        <div {...bind()} className="flex-shrink-0" style={{ paddingTop: 'calc(var(--safe-area-inset-top) + 6px)' }}>
-          <div className="flex justify-center pt-1 pb-2">
+        <div {...bind()} className="flex-shrink-0" style={{ paddingTop: 'calc(var(--safe-area-inset-top) + 16px)' }}>
+          <div className="flex justify-center pb-2">
             <div className="w-12 h-1 bg-slate-600 rounded-full" />
           </div>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-700">
             <h2 className="text-lg font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
