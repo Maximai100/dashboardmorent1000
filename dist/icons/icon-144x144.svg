@@ -1,21 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="144" height="144">
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='144' height='144'>
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#0b2444"/>
-      <stop offset="100%" stop-color="#040d1c"/>
+    <linearGradient id='grad' x1='0%' y1='0%' x2='0%' y2='100%'>
+      <stop offset='0%' stop-color='#0e2b50'/>
+      <stop offset='100%' stop-color='#051019'/>
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="12" result="blur"/>
+    <filter id='glow' x='-20%' y='-20%' width='140%' height='140%'>
+      <feGaussianBlur stdDeviation='8' result='blur'/>
       <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in='blur'/>
+        <feMergeNode in='SourceGraphic'/>
       </feMerge>
     </filter>
   </defs>
-  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#grad)"/>
-  <path d="M120 140 Q208 60 280 100" stroke="rgba(255,255,255,0.45)" stroke-width="40" fill="none" stroke-linecap="round"/>
-  <g filter="url(#glow)">
-    <text x="256" y="290" text-anchor="middle" font-family="'DejaVu Sans', 'Arial', sans-serif" font-size="180" font-weight="700" fill="#ffffff">Упр</text>
+  <rect x='28' y='28' width='456' height='456' rx='110' fill='url(#grad)'/>
+  <path d='M120 140 Q208 60 290 110' stroke='rgba(255,255,255,0.35)' stroke-width='32' fill='none' stroke-linecap='round'/>
+  <g filter='url(#glow)'>
+    <text x='256' y='275' text-anchor='middle' font-family="DejaVu Sans, Arial, sans-serif" font-size='150' font-weight='700' fill='#ffffff'>MORENT</text>
   </g>
-  <path d="M160 335 Q256 365 352 335" stroke="#ffffff" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <path d='M140 330 Q256 360 372 330' stroke='#ffffff' stroke-width='16' stroke-linecap='round' fill='none'/>
 </svg>
