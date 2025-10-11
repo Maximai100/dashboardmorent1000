@@ -24,9 +24,9 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
           manifest: {
-            name: 'Панель управления собственниками',
-            short_name: 'Собственники',
-            description: 'Система управления документами и данными собственников',
+            name: 'Управление',
+            short_name: 'Управление',
+            description: 'Система управления задачами и документами',
             theme_color: '#2563eb',
             background_color: '#0f172a',
             display: 'standalone',

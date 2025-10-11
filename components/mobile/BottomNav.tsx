@@ -22,8 +22,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, userRole 
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 z-40 lg:hidden pt-2 pb-[calc(1.75rem+var(--safe-area-inset-bottom))]">
-      <div className="flex justify-around items-center h-12">
+    <nav className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 z-40 lg:hidden pt-1 pb-[calc(0.9rem+var(--safe-area-inset-bottom))]">
+      <div className="flex justify-around items-center h-10">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -34,7 +34,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, userRole 
               onClick={() => onTabChange(tab.id)}
               className={`
                 relative flex flex-col items-center justify-center flex-1 h-full
-                min-w-[44px] min-h-[44px]
+                min-w-[44px] min-h-[36px] py-1
                 transition-colors duration-200
                 ${isActive 
                   ? 'text-blue-400' 
