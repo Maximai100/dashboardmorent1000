@@ -33,7 +33,7 @@ body {
 /* Mobile-specific utilities */
 @media (max-width: 639px) {
   .mobile-padding-bottom {
-    padding-bottom: calc(3.5rem + var(--safe-area-inset-bottom));
+    padding-bottom: calc(6rem + var(--safe-area-inset-bottom));
   }
 }
 
