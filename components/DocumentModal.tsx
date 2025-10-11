@@ -268,8 +268,8 @@ const DocumentModal: React.FC<DocumentModalProps> = ({ ownerName, documentName, 
                                                 <a
                                                     href={href}
                                                     download={!isViewable ? v.fileName : undefined}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                    target={isViewable ? '_blank' : undefined}
+                                                    rel={isViewable ? 'noopener noreferrer' : undefined}
                                                     className="p-2 rounded-md hover:bg-slate-600"
                                                 >
                                                     <ArrowDownTrayIcon className="w-5 h-5 text-slate-400" />

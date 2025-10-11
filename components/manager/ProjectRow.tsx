@@ -115,8 +115,8 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({ project, onRowClick, isD
                                     <a
                                         key={att.id}
                                         href={fileUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        target={!isViewable ? undefined : '_blank'}
+                                        rel={!isViewable ? undefined : 'noopener noreferrer'}
                                         title={fileTitle}
                                         onClick={(e) => e.stopPropagation()}
                                         download={!isViewable ? (fileName || undefined) : undefined}

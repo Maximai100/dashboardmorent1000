@@ -477,8 +477,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                                     <li key={att.id} className="p-3 flex items-center justify-between hover:bg-slate-700/50">
                                         <a 
                                             href={finalUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            target={!linkUrl && isFile && !isViewableFile ? undefined : '_blank'}
+                                            rel={!linkUrl && isFile && !isViewableFile ? undefined : 'noopener noreferrer'}
                                             className="flex items-center min-w-0 flex-grow group"
                                             title={displayTitle}
                                             download={!linkUrl && isFile && !isViewableFile ? (fileName || undefined) : undefined}
