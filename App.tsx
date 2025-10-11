@@ -301,17 +301,6 @@ const App: React.FC = () => {
                     </div>
                 )}
             </header>
-            {isMobile && (
-                <div className="mb-4">
-                    <button 
-                        onClick={() => setIsAddOwnerModalOpen(true)}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm active:bg-blue-700 touch-target"
-                    >
-                        <UserPlusIcon className="w-5 h-5"/>
-                        <span>Добавить собственника</span>
-                    </button>
-                </div>
-            )}
             <main className="relative">
                 <ResponsiveDashboard
                     owners={sortedOwners}
