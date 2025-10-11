@@ -317,6 +317,7 @@ const App: React.FC = () => {
                     <FloatingActions
                         onAddOwner={() => setIsAddOwnerModalOpen(true)}
                         onAddColumn={() => setIsAddColumnModalOpen(true)}
+                        onLogout={logout}
                         disabled={isAddOwnerModalOpen || isAddColumnModalOpen || loading}
                     />
                 )}

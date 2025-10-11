@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import BottomSheet from './BottomSheet';
-import { PlusIcon, UserPlusIcon, DocumentTextIcon, XMarkIcon } from '../icons/Icons';
+import { PlusIcon, UserPlusIcon, DocumentTextIcon, XMarkIcon, LogOutIcon } from '../icons/Icons';
 
 interface FloatingActionsProps {
     onAddOwner: () => void;
     onAddColumn: () => void;
+    onLogout: () => void;
     disabled?: boolean;
 }
 
-const FloatingActions: React.FC<FloatingActionsProps> = ({ onAddOwner, onAddColumn, disabled = false }) => {
+const FloatingActions: React.FC<FloatingActionsProps> = ({ onAddOwner, onAddColumn, onLogout, disabled = false }) => {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const handleOpen = () => {
@@ -64,9 +65,22 @@ const FloatingActions: React.FC<FloatingActionsProps> = ({ onAddOwner, onAddColu
                         <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-600/20 text-emerald-300">
                             <DocumentTextIcon className="w-5 h-5" />
                         </span>
+                <div>
+                    <p className="text-sm font-semibold">Новая колонка</p>
+                    <p className="text-xs text-slate-400">Документ или атрибут для всех собственников</p>
+                </div>
+            </button>
+                    <button
+                        type="button"
+                        onClick={() => handleAction(onLogout)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-600/20 border border-red-500/40 text-left text-red-200 active:bg-red-600/30 transition-colors"
+                    >
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 text-red-200">
+                            <LogOutIcon className="w-5 h-5" />
+                        </span>
                         <div>
-                            <p className="text-sm font-semibold">Новая колонка</p>
-                            <p className="text-xs text-slate-400">Документ или атрибут для всех собственников</p>
+                            <p className="text-sm font-semibold">Выйти</p>
+                            <p className="text-xs text-red-200/80">Завершить текущую сессию</p>
                         </div>
                     </button>
                 </div>
