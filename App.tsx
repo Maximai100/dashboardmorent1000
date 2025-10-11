@@ -364,7 +364,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen text-slate-200 p-4 sm:p-6 lg:p-8 mobile-padding-bottom">
+        <div className="min-h-screen text-slate-200 p-4 sm:p-6 lg:p-8 mobile-padding-bottom safe-area-top">
             <OfflineIndicator />
             
             <div className="max-w-full mx-auto">
@@ -415,7 +415,7 @@ const App: React.FC = () => {
 
                 {/* Mobile Header */}
                 {isMobile && (
-                    <div className="mb-4 flex justify-between items-center">
+                    <div className="mb-4 flex justify-between items-center pt-2">
                         <h1 className="text-xl font-bold text-white">
                             {activeTab === 'owners' ? 'Собственники' : 'Задачи'}
                         </h1>

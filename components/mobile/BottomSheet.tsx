@@ -63,7 +63,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title, child
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="absolute bottom-0 left-0 right-0 bg-slate-800 rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out"
+        className="absolute bottom-0 left-0 right-0 bg-slate-800 rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out safe-area-bottom"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

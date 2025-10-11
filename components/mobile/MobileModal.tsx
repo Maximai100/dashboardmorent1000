@@ -82,7 +82,7 @@ const MobileModal: React.FC<MobileModalProps> = ({ onClose, title, children, foo
 
   // Mobile modal (full-screen)
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900">
+    <div className="fixed inset-0 z-50 bg-slate-900 safe-area-top safe-area-bottom">
       <div ref={modalRef} className="h-full flex flex-col">
         {/* Header with swipe handle */}
         <div {...bind()} className="flex-shrink-0">

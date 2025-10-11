@@ -30,7 +30,8 @@ const FloatingActions: React.FC<FloatingActionsProps> = ({ onAddOwner, onAddColu
                 type="button"
                 onClick={handleOpen}
                 disabled={disabled}
-                className="lg:hidden fixed bottom-24 right-5 z-40 inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-900/40 hover:bg-blue-500 active:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="lg:hidden fixed right-5 z-40 inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-900/40 hover:bg-blue-500 active:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                style={{ bottom: 'calc(4.5rem + var(--safe-area-inset-bottom))' }}
                 aria-label="Действия"
             >
                 {isSheetOpen ? (
