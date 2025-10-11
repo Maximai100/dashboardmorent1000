@@ -9,7 +9,7 @@
         const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 
         function drawIcon(ctx, size) {
-            const radius = size * 0.22;
+            const radius = size * 0.23;
             const gradient = ctx.createLinearGradient(0, 0, 0, size);
             gradient.addColorStop(0, '#0b2444');
             gradient.addColorStop(1, '#040d1c');
@@ -25,7 +25,7 @@
             ctx.closePath();
             ctx.fill();
 
-            const highlightGradient = ctx.createRadialGradient(size * 0.15, size * 0.15, size * 0.05, size * 0.15, size * 0.15, size * 0.6);
+            const highlightGradient = ctx.createRadialGradient(size * 0.18, size * 0.18, size * 0.05, size * 0.18, size * 0.18, size * 0.65);
             highlightGradient.addColorStop(0, 'rgba(255,255,255,0.45)');
             highlightGradient.addColorStop(1, 'rgba(255,255,255,0)');
             ctx.fillStyle = highlightGradient;
@@ -34,17 +34,17 @@
             ctx.fill();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = `bold ${size * 0.4}px 'Arial'`;
+            ctx.font = `bold ${size * 0.28}px 'Arial'`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('MORENT', size / 2, size / 2);
+            ctx.fillText('MORENT', size / 2, size * 0.42);
 
             ctx.lineCap = 'round';
-            ctx.lineWidth = size * 0.04;
+            ctx.lineWidth = size * 0.035;
             ctx.beginPath();
             ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-            ctx.moveTo(size * 0.22, size * 0.65);
-            ctx.quadraticCurveTo(size * 0.5, size * 0.7, size * 0.78, size * 0.65);
+            ctx.moveTo(size * 0.18, size * 0.65);
+            ctx.quadraticCurveTo(size * 0.5, size * 0.71, size * 0.82, size * 0.65);
             ctx.stroke();
         }
 

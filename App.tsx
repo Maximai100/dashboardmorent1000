@@ -282,10 +282,10 @@ const App: React.FC = () => {
     
     const renderOwnersDashboard = () => (
         <>
-            <header className="mb-6 flex justify-between items-center flex-wrap gap-4">
+            <header className={`mb-6 flex justify-between items-center flex-wrap gap-4 ${isMobile ? 'mt-6' : ''}`}>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">Панель управления собственниками</h1>
-                    <p className="text-xs sm:text-sm lg:text-base text-slate-400 mt-1">Обзор документов и данных по всем апартаментам.</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white">Панель управления собственниками</h1>
+                    <p className="text-sm sm:text-base text-slate-400 mt-1">Обзор документов и данных по всем апартаментам.</p>
                 </div>
                 {!isMobile && (
                     <div>

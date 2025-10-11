@@ -7,7 +7,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onNewProject }) => {
     return (
-        <header className="mb-6 flex justify-between items-center flex-wrap gap-4">
+        <header className="mb-6 flex justify-between items-center flex-wrap gap-4 mt-6 sm:mt-0">
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-white">Дашборд руководителя</h1>
                 <p className="text-sm sm:text-base text-slate-400">Управляйте текущими задачами и ресурсами.</p>
