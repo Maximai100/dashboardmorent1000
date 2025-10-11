@@ -235,6 +235,7 @@ const App: React.FC = () => {
                                 onClose={() => setModalData(null)}
                                 onUpdate={handleUpdateOwner}
                                 onDelete={handleDeleteOwner}
+                                onDocumentOpen={(columnId) => setModalData({ type: 'document', ownerId: owner.id, columnId })}
                             />;
                         case 'document': {
                             if (modalData.type !== 'document') return null;

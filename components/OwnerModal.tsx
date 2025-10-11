@@ -15,9 +15,10 @@ interface OwnerModalProps {
     onClose: () => void;
     onUpdate: (updatedOwner: Owner) => void;
     onDelete: (ownerId: string) => void;
+    onDocumentOpen: (columnId: string) => void;
 }
 
-const OwnerModal: React.FC<OwnerModalProps> = ({ owner, columns, onClose, onUpdate, onDelete }) => {
+const OwnerModal: React.FC<OwnerModalProps> = ({ owner, columns, onClose, onUpdate, onDelete, onDocumentOpen }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editableOwner, setEditableOwner] = useState(owner);
     const isMobile = useIsMobile();
@@ -296,62 +297,76 @@ const OwnerModal: React.FC<OwnerModalProps> = ({ owner, columns, onClose, onUpda
                                     };
                                     
                                     return (
-                                        <div key={columnId} className="p-3 bg-slate-700/30 rounded-lg border border-slate-600">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <FileIcon className="w-4 h-4 text-slate-400" />
-                                                    <h5 className="font-medium text-slate-200">{columnName}</h5>
-                                                </div>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(docData.status)}`}>
-                                                    {docData.status}
-                                                </span>
-                                            </div>
-                                            
-                                            {docData.signingDate && (
-                                                <p className="text-xs text-slate-400 mb-1">
-                                                    📝 Подписан: {docData.signingDate}
-                                                </p>
-                                            )}
-                                            
-                                            {docData.expirationDate && (
-                                                <p className={`text-xs mb-1 ${docData.status === 'Истек' || docData.status === 'Скоро истекает' ? 'text-red-400 font-semibold' : 'text-slate-400'}`}>
-                                                    ⏰ Истекает: {docData.expirationDate}
-                                                </p>
-                                            )}
-                                            
-                                            {docData.versions && docData.versions.length > 0 && (
-                                                <div className="mt-2">
-                                                    <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                                                        <FileIcon className="w-3 h-3" />
-                                                        Файлов: {docData.versions.length}
-                                                    </p>
-                                                    <div className="space-y-1">
-                                                        {docData.versions.slice(0, 3).map((version, index) => (
-                                                            <div key={version.id || index} className="flex items-center text-xs text-slate-300 bg-slate-800/50 p-2 rounded">
-                                                                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2 flex-shrink-0" />
-                                                                <span className="truncate flex-1">{version.fileName || `Файл ${index + 1}`}</span>
-                                                                {version.uploadDate && (
-                                                                    <span className="ml-2 text-slate-500 flex-shrink-0">
-                                                                        {version.uploadDate}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                        {docData.versions.length > 3 && (
-                                                            <p className="text-xs text-slate-500 text-center py-1">
-                                                                +{docData.versions.length - 3} файлов
-                                                            </p>
-                                                        )}
+                                        <div key={columnId}>
+                                            <button
+                                                type="button"
+                                                onClick={() => onDocumentOpen(columnId)}
+                                                className="w-full text-left p-3 bg-slate-700/30 rounded-lg border border-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 transition-colors active:bg-slate-700/60"
+                                                aria-label={`Открыть документ ${columnName}`}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <FileIcon className="w-4 h-4 text-slate-400" />
+                                                        <h5 className="font-medium text-slate-200">{columnName}</h5>
                                                     </div>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(docData.status)}`}>
+                                                        {docData.status}
+                                                    </span>
                                                 </div>
-                                            )}
-                                            
-                                            {docData.notes && (
-                                                <div className="mt-2 p-2 bg-slate-800/50 rounded">
-                                                    <p className="text-xs text-slate-400 mb-1">💬 Заметки:</p>
-                                                    <p className="text-xs text-slate-300">{docData.notes}</p>
-                                                </div>
-                                            )}
+
+                                                {docData.signingDate && (
+                                                    <p className="text-xs text-slate-400 mb-1">
+                                                        📝 Подписан: {docData.signingDate}
+                                                    </p>
+                                                )}
+
+                                                {docData.expirationDate && (
+                                                    <p className={`text-xs mb-1 ${docData.status === 'Истек' || docData.status === 'Скоро истекает' ? 'text-red-400 font-semibold' : 'text-slate-400'}`}>
+                                                        ⏰ Истекает: {docData.expirationDate}
+                                                    </p>
+                                                )}
+
+                                                {docData.versions && docData.versions.length > 0 && (
+                                                    <div className="mt-2">
+                                                        <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                                                            <FileIcon className="w-3 h-3" />
+                                                            Файлов: {docData.versions.length}
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            {docData.versions.slice(0, 3).map((version, index) => (
+                                                                <div key={version.id || index} className="flex items-center text-xs text-slate-300 bg-slate-800/50 p-2 rounded">
+                                                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2 flex-shrink-0" />
+                                                                    <span className="truncate flex-1">{version.fileName || `Файл ${index + 1}`}</span>
+                                                                    {version.uploadDate && (
+                                                                        <span className="ml-2 text-slate-500 flex-shrink-0">
+                                                                            {version.uploadDate}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                            {docData.versions.length > 3 && (
+                                                                <p className="text-xs text-slate-500 text-center py-1">
+                                                                    +{docData.versions.length - 3} файлов
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {docData.notes && (
+                                                    <div className="mt-2 p-2 bg-slate-800/50 rounded">
+                                                        <p className="text-xs text-slate-400 mb-1">💬 Заметки:</p>
+                                                        <p className="text-xs text-slate-300">{docData.notes}</p>
+                                                    </div>
+                                                )}
+
+                                                <span className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-blue-300">
+                                                    Открыть и редактировать
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                                    </svg>
+                                                </span>
+                                            </button>
                                         </div>
                                     );
                                 } else if (isAttributeData) {
